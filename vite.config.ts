@@ -5,9 +5,6 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [cloudflare(), tailwindcss(), reactRouter()],
-  build: {
-    outDir: "build",
-  },
   resolve: {
     tsconfigPaths: true,
   },
