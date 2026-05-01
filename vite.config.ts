@@ -4,7 +4,10 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  plugins: [tailwindcss(), cloudflare(), reactRouter()],
+  plugins: [cloudflare(), tailwindcss(), reactRouter()],
+  build: {
+    outDir: "build",
+  },
   resolve: {
     tsconfigPaths: true,
   },
