@@ -1,7 +1,15 @@
 .DS_Store
 .env
+.dev.vars
 /node_modules/
 
 # React Router
 /.react-router/
 /build/
+
+# Cloudflare
+.wrangler/
+
+# Mock assets
+/scripts/mock-images/*
+!/scripts/mock-images/.gitkeep

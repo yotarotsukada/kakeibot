@@ -1,0 +1,20 @@
+# ---- Mock Flags ----
+# USE_MOCK_LINE    → MockLineClient: logs replies to console, returns placeholder image (unless local image path is passed)
+# USE_MOCK_AI      → MockReceiptParser: keyword-based parsing, no Gemini call
+# USE_MOCK_STORAGE → MockStorage: in-memory ledger, pre-seeded users (U_MOCK_USER_A→A, U_MOCK_USER_B→B)
+USE_MOCK_LINE=true
+USE_MOCK_AI=true
+USE_MOCK_STORAGE=true
+
+# ---- LINE Messaging API ----
+LINE_CHANNEL_SECRET=test-channel-secret
+LINE_CHANNEL_ACCESS_TOKEN=test-channel-access-token
+
+# ---- Gemini API ----
+GEMINI_API_KEY=your-gemini-api-key
+GEMINI_MODEL=gemini-2.5-flash-lite
+
+# ---- Google Sheets API ----
+GOOGLE_SERVICE_ACCOUNT_EMAIL=your-service-account@project.iam.gserviceaccount.com
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_KEY_HERE\n-----END PRIVATE KEY-----"
+SPREADSHEET_ID=your-spreadsheet-id
