@@ -129,10 +129,8 @@ app/
 └── routes/          ルーティング + Composition Root（DI）
 ```
 
-詳細は [docs/MVP.md](docs/MVP.md) を参照してください。
-
 ## ドキュメント
 
 - [docs/SPEC.md](docs/SPEC.md) — プロダクト仕様書
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — 技術スタック選定
-- [docs/MVP.md](docs/MVP.md) — MVP 実装ドキュメント（設計判断を含む）
+- [docs/C4.md](docs/C4.md) — C4 モデル

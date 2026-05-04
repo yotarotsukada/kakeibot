@@ -13,3 +13,5 @@
 # Mock assets
 /scripts/mock-images/*
 !/scripts/mock-images/.gitkeep
+temp/*
+!temp/.gitkeep
