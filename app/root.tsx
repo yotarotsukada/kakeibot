@@ -11,10 +11,20 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLoaderData,
 } from "react-router";
 
+import { LiffGate } from "~/components/LiffGate";
 import type { Route } from "./+types/root";
 import "./app.css";
+
+export async function loader({ context }: Route.LoaderArgs) {
+  const { env } = (context as { cloudflare: { env: Env } }).cloudflare;
+  return {
+    liffId: env.LIFF_ID,
+    useMockLiff: env.USE_MOCK_LIFF === "true",
+  };
+}
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -53,8 +63,9 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   }`;
 
 export default function App() {
+  const { liffId, useMockLiff } = useLoaderData<typeof loader>();
   return (
-    <>
+    <LiffGate liffId={liffId} useMockLiff={useMockLiff}>
       <div className="pb-16">
         <Outlet />
       </div>
@@ -72,7 +83,7 @@ export default function App() {
           予算管理
         </NavLink>
       </nav>
-    </>
+    </LiffGate>
   );
 }
 

@@ -6,10 +6,14 @@ interface Env {
   USE_MOCK_LINE: string;
   USE_MOCK_AI: string;
   USE_MOCK_STORAGE: string;
+  USE_MOCK_LIFF: string;
 
   // ---- LINE Messaging API ----
   LINE_CHANNEL_SECRET: string;
   LINE_CHANNEL_ACCESS_TOKEN: string;
+
+  // ---- LIFF ----
+  LIFF_ID: string;
 
   // ---- Gemini API ----
   GEMINI_API_KEY: string;
