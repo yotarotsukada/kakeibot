@@ -6,14 +6,6 @@ type CategoryBudgetRowProps = {
   color: string;
 };
 
-/**
- * カテゴリ単位の進捗行。
- *
- * デザイン意図:
- *   - 1 行目：色ドット + カテゴリ名 + 残り金額（行のメイン情報）
- *   - 2 行目：プログレスバー + 使用 / 予算（補助情報、控えめ）
- *   - 「残り」を太めに、「使用」「予算」は薄く
- */
 export function CategoryBudgetRow({ usage, color }: CategoryBudgetRowProps) {
   const isOver = usage.remainingAmount < 0;
   const barColor = isOver ? OVER_BUDGET_COLOR : color;
@@ -30,30 +22,38 @@ export function CategoryBudgetRow({ usage, color }: CategoryBudgetRowProps) {
           {usage.categoryName}
         </span>
         <span
-          className={`font-numeric text-sm font-bold tabular-nums ${
+          className={`text-sm font-bold tabular-nums ${
             isOver ? "text-destructive" : "text-foreground/85"
           }`}
         >
-          {isOver
-            ? `−¥${Math.abs(usage.remainingAmount).toLocaleString()}`
-            : `¥${usage.remainingAmount.toLocaleString()}`}
+          <span className="font-sans text-[10px] font-medium opacity-70 mr-0.5">
+            {isOver ? "超過" : "あと"}
+          </span>
+          <span className="font-numeric">
+            {isOver
+              ? `−¥${Math.abs(usage.remainingAmount).toLocaleString()}`
+              : `¥${usage.remainingAmount.toLocaleString()}`}
+          </span>
         </span>
       </div>
 
-      <div className="ml-4 flex items-center gap-2.5">
-        <div className="flex-1 h-1 bg-foreground/8 rounded-full overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all duration-500 ease-out"
-            style={{
-              width: `${Math.min(usage.usagePercentage, 100)}%`,
-              backgroundColor: barColor,
-            }}
-          />
-        </div>
-        <span className="font-numeric text-[10px] tabular-nums text-muted-foreground/70 min-w-[3.2rem] text-right">
-          ¥{usage.usedAmount.toLocaleString()}/¥
-          {usage.budgetAmount.toLocaleString()}
-        </span>
+      <div className="h-1.5 bg-foreground/8 rounded-full overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-500 ease-out"
+          style={{
+            width: `${Math.min(usage.usagePercentage, 100)}%`,
+            backgroundColor: barColor,
+          }}
+        />
+      </div>
+
+      <div className="flex justify-between">
+        <p className="font-numeric text-xs tabular-nums text-muted-foreground">
+          ¥{usage.usedAmount.toLocaleString()}
+        </p>
+        <p className="font-numeric text-xs tabular-nums text-muted-foreground">
+          ¥{usage.budgetAmount.toLocaleString()}
+        </p>
       </div>
     </div>
   );
