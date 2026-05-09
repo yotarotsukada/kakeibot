@@ -2,19 +2,22 @@
 # USE_MOCK_LINE    → MockLineClient: logs replies to console, returns placeholder image (unless local image path is passed)
 # USE_MOCK_AI      → MockReceiptParser: keyword-based parsing, no Gemini call
 # USE_MOCK_STORAGE → MockStorage: in-memory ledger, pre-seeded users (U_MOCK_USER_A→A, U_MOCK_USER_B→B)
-# USE_MOCK_LIFF    → MockLIFF: skips LINE auth, auto-logs in as U_MOCK_USER_A (テストユーザー)
+# USE_MOCK_AUTH    → skips LINE Login OAuth, auto-authenticates as U_MOCK_USER_A
 USE_MOCK_LINE=true
 USE_MOCK_AI=true
 USE_MOCK_STORAGE=true
-USE_MOCK_LIFF=true
+USE_MOCK_AUTH=true
 
 # ---- LINE Messaging API ----
 LINE_CHANNEL_SECRET=test-channel-secret
 LINE_CHANNEL_ACCESS_TOKEN=test-channel-access-token
 
-# ---- LIFF ----
-# 本番では LINE Developers で発行した LIFF ID を設定する
-LIFF_ID=dummy-liff-id
+# ---- LINE Login OAuth ----
+# 本番では LINE Developers の LINE Login チャンネルから取得した値を設定する
+LINE_LOGIN_CHANNEL_ID=your-line-login-channel-id
+LINE_LOGIN_CHANNEL_SECRET=your-line-login-channel-secret
+LINE_LOGIN_CALLBACK_URL=http://localhost:5173/auth/callback
+JWT_SECRET=dev-secret-change-in-production
 
 # ---- Gemini API ----
 GEMINI_API_KEY=your-gemini-api-key

@@ -6,6 +6,7 @@ import { Card } from "~/components/ui/card";
 import { unwrap } from "~/domain/result";
 import { getDashboardData } from "~/features/budget/dashboard";
 import { createStorage } from "~/infra/factory";
+import { requireAuth } from "~/lib/auth";
 import type { Route } from "./+types/home";
 
 export function meta(_args: Route.MetaArgs) {
@@ -34,6 +35,7 @@ function buildMonthRange(currentMonth: string): string[] {
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const { env } = (context as { cloudflare: { env: Env } }).cloudflare;
+  await requireAuth(request, env);
   const storage = createStorage(env);
 
   const currentMonth = getCurrentMonthJST();

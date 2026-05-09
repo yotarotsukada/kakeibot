@@ -5,23 +5,13 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  useLoaderData,
 } from "react-router";
 
-import { LiffGate } from "~/components/LiffGate";
 import { BottomNav } from "~/components/layout/BottomNav";
 import { Toaster } from "~/components/Toaster";
 import { AppError } from "~/domain/errors";
 import type { Route } from "./+types/root";
 import "./app.css";
-
-export async function loader({ context }: Route.LoaderArgs) {
-  const { env } = (context as { cloudflare: { env: Env } }).cloudflare;
-  return {
-    liffId: env.LIFF_ID,
-    useMockLiff: env.USE_MOCK_LIFF === "true",
-  };
-}
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -55,15 +45,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  const { liffId, useMockLiff } = useLoaderData<typeof loader>();
   return (
-    <LiffGate liffId={liffId} useMockLiff={useMockLiff}>
+    <>
       <main className="min-h-svh pb-20">
         <Outlet />
       </main>
       <BottomNav />
       <Toaster />
-    </LiffGate>
+    </>
   );
 }
 

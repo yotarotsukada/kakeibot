@@ -19,6 +19,7 @@ import {
   actionError,
   useActionErrorToast,
 } from "~/lib/action-result";
+import { requireAuth } from "~/lib/auth";
 import type { Route } from "./+types/budget";
 
 export function meta(_args: Route.MetaArgs) {
@@ -51,6 +52,7 @@ function isValidMonth(month: string, range: string[]): boolean {
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const { env } = (context as { cloudflare: { env: Env } }).cloudflare;
+  await requireAuth(request, env);
   const storage = createStorage(env);
 
   const currentMonth = getCurrentMonthJST();
@@ -70,6 +72,7 @@ export async function action({
   context,
 }: Route.ActionArgs): Promise<ActionError | Response> {
   const { env } = (context as { cloudflare: { env: Env } }).cloudflare;
+  await requireAuth(request, env);
   const storage = createStorage(env);
 
   const formData = await request.formData();
