@@ -89,11 +89,15 @@ export function WalletCard({
         {/* 使用 / 予算（ラベル付き両端表示） */}
         <div className="mt-2.5 flex justify-between">
           <div>
-            <p className="font-numeric text-xs tabular-nums text-muted-foreground">¥{totalUsed.toLocaleString()}</p>
+            <p className="font-numeric text-xs tabular-nums text-muted-foreground">
+              ¥{totalUsed.toLocaleString()}
+            </p>
             <p className="text-[10px] text-muted-foreground/60 mt-0.5">使用</p>
           </div>
           <div className="text-right">
-            <p className="font-numeric text-xs tabular-nums text-muted-foreground">¥{totalBudget.toLocaleString()}</p>
+            <p className="font-numeric text-xs tabular-nums text-muted-foreground">
+              ¥{totalBudget.toLocaleString()}
+            </p>
             <p className="text-[10px] text-muted-foreground/60 mt-0.5">予算</p>
           </div>
         </div>

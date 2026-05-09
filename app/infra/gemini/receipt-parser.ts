@@ -108,10 +108,10 @@ export class GeminiReceiptParser implements ReceiptParser {
     // Gemini API レスポンス構造の検証（infra の責務）
     const apiResult = v.safeParse(GeminiResponseSchema, rawJson);
     if (!apiResult.success) {
-      throw new ValidationError(
-        `Gemini レスポンス構造が不正です: ${JSON.stringify(v.flatten(apiResult.issues))}`,
-        apiResult.issues,
-      );
+      throw new ValidationError({
+        message: `Gemini レスポンス構造が不正です: ${JSON.stringify(v.flatten(apiResult.issues))}`,
+        cause: apiResult.issues,
+      });
     }
 
     const text = apiResult.output.candidates[0].content.parts[0].text;
@@ -129,10 +129,10 @@ export class GeminiReceiptParser implements ReceiptParser {
     // ParsedEntry ドメイン不変条件の検証（domain のスキーマを使用）
     const entryResult = v.safeParse(ParsedEntrySchema, parsedJson);
     if (!entryResult.success) {
-      throw new ValidationError(
-        `Gemini 解析結果が不正です: ${JSON.stringify(v.flatten(entryResult.issues))}`,
-        entryResult.issues,
-      );
+      throw new ValidationError({
+        message: `Gemini 解析結果が不正です: ${JSON.stringify(v.flatten(entryResult.issues))}`,
+        cause: entryResult.issues,
+      });
     }
 
     return entryResult.output;

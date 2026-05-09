@@ -6,12 +6,19 @@ import { getCategoryColor } from "~/components/features/wallet/categoryColors";
 import { MonthSelector } from "~/components/features/wallet/MonthSelector";
 import { PageLayout } from "~/components/layout/PageLayout";
 import { Card } from "~/components/ui/card";
+import { ValidationError } from "~/domain/errors";
+import { unwrap } from "~/domain/result";
 import {
   deleteBudget,
   getBudgetPageData,
   upsertBudget,
 } from "~/features/budget/manage";
 import { createStorage } from "~/infra/factory";
+import {
+  type ActionError,
+  actionError,
+  useActionErrorToast,
+} from "~/lib/action-result";
 import type { Route } from "./+types/budget";
 
 export function meta(_args: Route.MetaArgs) {
@@ -54,11 +61,14 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     ? rawMonth
     : currentMonth;
 
-  const data = await getBudgetPageData(selectedMonth, { storage });
+  const data = unwrap(await getBudgetPageData(selectedMonth, { storage }));
   return { ...data, selectedMonth, currentMonth, monthRange };
 }
 
-export async function action({ request, context }: Route.ActionArgs) {
+export async function action({
+  request,
+  context,
+}: Route.ActionArgs): Promise<ActionError | Response> {
   const { env } = (context as { cloudflare: { env: Env } }).cloudflare;
   const storage = createStorage(env);
 
@@ -68,24 +78,28 @@ export async function action({ request, context }: Route.ActionArgs) {
   const month = String(formData.get("month") ?? "");
 
   if (intent === "upsert") {
-    const categoryName = String(formData.get("categoryName") ?? "").trim();
+    const categoryName = String(formData.get("categoryName") ?? "");
     const amount = Number(formData.get("amount"));
-    if (categoryName && !Number.isNaN(amount) && amount >= 0) {
-      await upsertBudget(walletName, categoryName, amount, { storage });
-    }
+    const result = await upsertBudget(walletName, categoryName, amount, {
+      storage,
+    });
+    if (!result.ok) return actionError(result.error);
     return redirect(`/budget?month=${month}`);
   }
 
   if (intent === "delete") {
     const categoryName = String(formData.get("categoryName") ?? "");
     const result = await deleteBudget(walletName, categoryName, { storage });
-    if (result.error) {
-      return { error: result.error, month };
-    }
+    if (!result.ok) return actionError(result.error);
     return redirect(`/budget?month=${month}`);
   }
 
-  return redirect(`/budget?month=${month}`);
+  return actionError(
+    new ValidationError({
+      message: `unknown intent: ${intent}`,
+      userMessage: "不明な操作です。画面を再読み込みしてください。",
+    }),
+  );
 }
 
 export default function BudgetPage() {
@@ -99,7 +113,10 @@ export default function BudgetPage() {
     selectedMonth,
     monthRange,
   } = useLoaderData<typeof loader>();
-  const actionData = useActionData<typeof action>();
+
+  // action が失敗したときのみ ActionError が来る。redirect 成功時は undefined。
+  const actionData = useActionData<typeof action>() as ActionError | undefined;
+  useActionErrorToast(actionData);
 
   const currentIdx = monthRange.indexOf(selectedMonth);
   const prevMonth = currentIdx > 0 ? monthRange[currentIdx - 1] : null;
@@ -114,12 +131,6 @@ export default function BudgetPage() {
         nextMonth={nextMonth}
         basePath="/budget"
       />
-
-      {actionData && "error" in actionData && actionData.error && (
-        <div className="rounded-2xl bg-destructive/8 ring-1 ring-destructive/20 text-destructive px-4 py-3 text-sm">
-          {actionData.error}
-        </div>
-      )}
 
       <BudgetOverviewCard
         walletName={walletName}

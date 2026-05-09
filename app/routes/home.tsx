@@ -3,6 +3,7 @@ import { MonthSelector } from "~/components/features/wallet/MonthSelector";
 import { WalletCard } from "~/components/features/wallet/WalletCard";
 import { PageLayout } from "~/components/layout/PageLayout";
 import { Card } from "~/components/ui/card";
+import { unwrap } from "~/domain/result";
 import { getDashboardData } from "~/features/budget/dashboard";
 import { createStorage } from "~/infra/factory";
 import type { Route } from "./+types/home";
@@ -42,7 +43,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const rawMonth = url.searchParams.get("month") ?? currentMonth;
   const selectedMonth = monthRange.includes(rawMonth) ? rawMonth : currentMonth;
 
-  const coreData = await getDashboardData({ storage, selectedMonth });
+  const coreData = unwrap(await getDashboardData({ storage, selectedMonth }));
   return { ...coreData, currentMonth, selectedMonth, monthRange };
 }
 
@@ -56,7 +57,6 @@ export default function Home() {
     categoryUsages,
     recentWalletSummary,
     selectedMonth,
-    currentMonth,
     monthRange,
   } = useLoaderData<typeof loader>();
 
