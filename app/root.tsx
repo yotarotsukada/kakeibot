@@ -1,13 +1,7 @@
 import {
-  DashboardCircleIcon,
-  WalletCardsIcon,
-} from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
-import {
   isRouteErrorResponse,
   Links,
   Meta,
-  NavLink,
   Outlet,
   Scripts,
   ScrollRestoration,
@@ -15,6 +9,7 @@ import {
 } from "react-router";
 
 import { LiffGate } from "~/components/LiffGate";
+import { BottomNav } from "~/components/layout/BottomNav";
 import type { Route } from "./+types/root";
 import "./app.css";
 
@@ -35,7 +30,7 @@ export const links: Route.LinksFunction = () => [
   },
   {
     rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
+    href: "https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Zen+Maru+Gothic:wght@400;500;700&display=swap",
   },
 ];
 
@@ -57,32 +52,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-  `flex-1 flex flex-col items-center justify-center gap-0.5 text-xs font-medium transition-colors ${
-    isActive ? "text-blue-600" : "text-gray-400 hover:text-gray-600"
-  }`;
-
 export default function App() {
   const { liffId, useMockLiff } = useLoaderData<typeof loader>();
   return (
     <LiffGate liffId={liffId} useMockLiff={useMockLiff}>
-      <div className="pb-16">
+      <main className="min-h-svh pb-20">
         <Outlet />
-      </div>
-      <nav className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-100 flex items-stretch">
-        <NavLink to="/" end className={navLinkClass}>
-          <HugeiconsIcon
-            icon={DashboardCircleIcon}
-            size={22}
-            strokeWidth={1.6}
-          />
-          ダッシュボード
-        </NavLink>
-        <NavLink to="/budget" className={navLinkClass}>
-          <HugeiconsIcon icon={WalletCardsIcon} size={22} strokeWidth={1.6} />
-          予算管理
-        </NavLink>
-      </nav>
+      </main>
+      <BottomNav />
     </LiffGate>
   );
 }

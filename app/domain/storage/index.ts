@@ -10,7 +10,7 @@ export const SHEET_NAMES = {
   LEDGER: "元帳",
   USER_MASTER: "ユーザーマスタ",
   WALLET_MASTER: "財布マスタ",
-  CATEGORY_MASTER: "費目マスタ",
+  CATEGORY_MASTER: "カテゴリマスタ",
   BUDGET: "予算記録",
 } as const;
 

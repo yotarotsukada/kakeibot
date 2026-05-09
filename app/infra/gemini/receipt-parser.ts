@@ -29,7 +29,7 @@ function getSystemPrompt(today?: string) {
   "date": "YYYY-MM-DD",
   "type": "支出",
   "amount": 数値,
-  "category": "費目名",
+  "category": "カテゴリ名",
   "memo": "店名や商品の概要"
 }
 

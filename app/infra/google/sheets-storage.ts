@@ -139,7 +139,7 @@ export class GoogleSheetsStorage implements Storage {
         .map((row) => row[0])
         .filter(Boolean);
     } catch (err) {
-      throw new GoogleSheetsError("費目マスタの取得に失敗しました", err);
+      throw new GoogleSheetsError("カテゴリマスタの取得に失敗しました", err);
     }
   }
 

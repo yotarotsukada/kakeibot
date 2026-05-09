@@ -1,5 +1,5 @@
 ---
-trigger: model_decision
+name: coding-standards
 description: 機能実装・修正時に適用するアーキテクチャ規範とコーディング規約
 ---
 
