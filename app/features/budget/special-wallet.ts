@@ -1,4 +1,4 @@
-import type { BudgetRecord, Wallet } from "~/domain/budget/budget";
+import type { Wallet } from "~/domain/budget/budget";
 import {
   AppError,
   BusinessRuleError,
@@ -13,24 +13,18 @@ export type SpecialWalletSummary = {
   totalBudget: number;
   totalUsed: number;
   usagePercentage: number;
-  budgetRecords: BudgetRecord[];
 };
 
 export type SpecialWalletsPageData = {
   wallets: SpecialWalletSummary[];
-  categories: string[];
 };
 
 export async function getSpecialWalletsPageData(deps: {
   storage: Storage;
 }): Promise<Result<SpecialWalletsPageData, AppError>> {
   try {
-    const [allWallets, categories] = await Promise.all([
-      deps.storage.getWallets(),
-      deps.storage.getCategories(),
-    ]);
-
-    const specialWallets = allWallets.filter((w) => w.type === "一括");
+    const allWallets = await deps.storage.getWallets();
+    const specialWallets = allWallets.filter((w) => w.type === "特別");
 
     const walletSummaries = await Promise.all(
       specialWallets.map(async (wallet) => {
@@ -48,7 +42,7 @@ export async function getSpecialWalletsPageData(deps: {
           entries.length > 0
             ? entries.reduce((max, e) => (e.date > max ? e.date : max), "")
             : "";
-        return { wallet, totalBudget, totalUsed, usagePercentage, budgetRecords, latestDate };
+        return { wallet, totalBudget, totalUsed, usagePercentage, latestDate };
       }),
     );
 
@@ -61,16 +55,15 @@ export async function getSpecialWalletsPageData(deps: {
     });
 
     const wallets = sorted.map(
-      ({ wallet, totalBudget, totalUsed, usagePercentage, budgetRecords }) => ({
+      ({ wallet, totalBudget, totalUsed, usagePercentage }) => ({
         wallet,
         totalBudget,
         totalUsed,
         usagePercentage,
-        budgetRecords,
       }),
     );
 
-    return ok({ wallets, categories });
+    return ok({ wallets });
   } catch (e) {
     return err(wrapUnknownError(e));
   }
@@ -103,7 +96,7 @@ export async function createSpecialWallet(
 
     await deps.storage.upsertWallet({
       name: walletName.trim(),
-      type: "一括",
+      type: "特別",
       settled: false,
     });
     return ok(undefined);

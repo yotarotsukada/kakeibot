@@ -66,7 +66,7 @@ export async function getDashboardData(deps: {
 
     // 未精算の特別財布を取得し、各財布の明細・予算を並列フェッチ
     const unsettledSpecialWallets = wallets.filter(
-      (w) => w.type === "一括" && !w.settled,
+      (w) => w.type === "特別" && !w.settled,
     );
 
     const walletDataList = await Promise.all(
