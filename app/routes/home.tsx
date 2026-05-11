@@ -1,4 +1,4 @@
-import { useLoaderData } from "react-router";
+import { Link, useLoaderData } from "react-router";
 import { SPECIAL_WALLET_ACCENT_COLOR } from "~/components/features/wallet/categoryColors";
 import { MonthSelector } from "~/components/features/wallet/MonthSelector";
 import { WalletCard } from "~/components/features/wallet/WalletCard";
@@ -39,7 +39,7 @@ export default function Home() {
     totalUsed,
     totalUsagePercentage,
     categoryUsages,
-    recentWalletSummary,
+    recentWalletSummaries,
     selectedMonth,
     monthRange,
   } = useLoaderData<typeof loader>();
@@ -85,25 +85,33 @@ export default function Home() {
 
       {/*
         特別財布エリア: 月とは独立した目標予算（旅行・家具など）。
-        水平区切り + 専用ヘッダで「月の枠から外れた別枠」であることを強調する。
+        未精算の特別財布を最大3件表示。管理画面へのリンクを併設。
       */}
-      {recentWalletSummary && (
+      {recentWalletSummaries.length > 0 && (
         <section className="space-y-3 pt-3">
           <div className="flex items-center gap-3 px-1">
             <span className="h-px flex-1 bg-border" aria-hidden />
-            <span className="text-[11px] font-semibold text-muted-foreground/70 tracking-wider">
+            <Link
+              to="/special-wallets"
+              className="text-[11px] font-semibold text-muted-foreground/70 tracking-wider hover:text-primary transition-colors"
+            >
               特別財布
-            </span>
+            </Link>
             <span className="h-px flex-1 bg-border" aria-hidden />
           </div>
-          <WalletCard
-            walletName={recentWalletSummary.walletName}
-            totalBudget={recentWalletSummary.totalBudget}
-            totalUsed={recentWalletSummary.totalUsed}
-            usagePercentage={recentWalletSummary.usagePercentage}
-            accentColor={SPECIAL_WALLET_ACCENT_COLOR}
-            monthly={false}
-          />
+          <div className="space-y-3">
+            {recentWalletSummaries.map((summary) => (
+              <WalletCard
+                key={summary.walletName}
+                walletName={summary.walletName}
+                totalBudget={summary.totalBudget}
+                totalUsed={summary.totalUsed}
+                usagePercentage={summary.usagePercentage}
+                accentColor={SPECIAL_WALLET_ACCENT_COLOR}
+                monthly={false}
+              />
+            ))}
+          </div>
         </section>
       )}
     </PageLayout>

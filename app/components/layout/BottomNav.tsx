@@ -1,4 +1,8 @@
-import { Coins01Icon, PiggyBankIcon } from "@hugeicons/core-free-icons";
+import {
+  Coins01Icon,
+  PiggyBankIcon,
+  Wallet01Icon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { NavLink } from "react-router";
 
@@ -14,7 +18,7 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
  * BottomNav。
  *
  * デザイン意図:
- *   - 「家計（コイン）」と「予算（豚の貯金箱）」のメタファでアプリの性格を伝える
+ *   - 「家計（コイン）」「予算（豚の貯金箱）」「特別財布（★）」のメタファでアプリの性格を伝える
  *   - 選択中は色で示す（追加の装飾は控えて画面を喧しくしない）
  *   - backdrop-blur で背景がほのかに透けて軽快な印象
  */
@@ -30,6 +34,18 @@ export function BottomNav() {
               strokeWidth={isActive ? 2 : 1.5}
             />
             <span>家計</span>
+          </>
+        )}
+      </NavLink>
+      <NavLink to="/special-wallets" className={navLinkClass}>
+        {({ isActive }) => (
+          <>
+            <HugeiconsIcon
+              icon={Wallet01Icon}
+              size={22}
+              strokeWidth={isActive ? 2 : 1.5}
+            />
+            <span>特別財布</span>
           </>
         )}
       </NavLink>

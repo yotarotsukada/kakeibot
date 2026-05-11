@@ -24,7 +24,8 @@ export type DashboardCoreData = {
   totalUsed: number;
   totalUsagePercentage: number;
   categoryUsages: CategoryUsage[];
-  recentWalletSummary: WalletSummary | null;
+  /** 未精算の特別財布サマリ（最新活動順、最大3件）。 */
+  recentWalletSummaries: WalletSummary[];
 };
 
 export async function getDashboardData(deps: {
@@ -34,13 +35,11 @@ export async function getDashboardData(deps: {
   try {
     const normalWalletName = `${deps.selectedMonth}通常`;
 
-    const [wallets, normalBudgets, normalEntries, latestEntry] =
-      await Promise.all([
-        deps.storage.getWallets(),
-        deps.storage.getBudgetRecords(normalWalletName),
-        deps.storage.getLedgerEntriesByWallet(normalWalletName),
-        deps.storage.getLatestLedgerEntry(),
-      ]);
+    const [wallets, normalBudgets, normalEntries] = await Promise.all([
+      deps.storage.getWallets(),
+      deps.storage.getBudgetRecords(normalWalletName),
+      deps.storage.getLedgerEntriesByWallet(normalWalletName),
+    ]);
 
     const normalWalletExists = wallets.some((w) => w.name === normalWalletName);
 
@@ -65,31 +64,41 @@ export async function getDashboardData(deps: {
     const totalUsagePercentage =
       totalBudget > 0 ? Math.round((totalUsed / totalBudget) * 100) : 0;
 
-    const latestIsSpecial =
-      latestEntry != null &&
-      wallets.some(
-        (w) => w.name === latestEntry.walletName && w.type === "一括",
-      );
+    // 未精算の特別財布を取得し、各財布の明細・予算を並列フェッチ
+    const unsettledSpecialWallets = wallets.filter(
+      (w) => w.type === "一括" && !w.settled,
+    );
 
-    let recentWalletSummary: WalletSummary | null = null;
-    if (latestIsSpecial && latestEntry) {
-      const [recentEntries, recentBudgets] = await Promise.all([
-        deps.storage.getLedgerEntriesByWallet(latestEntry.walletName),
-        deps.storage.getBudgetRecords(latestEntry.walletName),
-      ]);
-      const walletUsed = recentEntries
-        .filter((e) => e.type === "支出")
-        .reduce((sum, e) => sum + e.amount, 0);
-      const walletBudget = recentBudgets.reduce((sum, b) => sum + b.amount, 0);
-      const usagePercentage =
-        walletBudget > 0 ? Math.round((walletUsed / walletBudget) * 100) : 0;
-      recentWalletSummary = {
-        walletName: latestEntry.walletName,
-        totalBudget: walletBudget,
-        totalUsed: walletUsed,
+    const walletDataList = await Promise.all(
+      unsettledSpecialWallets.map(async (w) => {
+        const [entries, budgets] = await Promise.all([
+          deps.storage.getLedgerEntriesByWallet(w.name),
+          deps.storage.getBudgetRecords(w.name),
+        ]);
+        const latestDate =
+          entries.length > 0
+            ? entries.reduce((max, e) => (e.date > max ? e.date : max), "")
+            : "";
+        const totalUsed = entries
+          .filter((e) => e.type === "支出")
+          .reduce((sum, e) => sum + e.amount, 0);
+        const totalBudget = budgets.reduce((sum, b) => sum + b.amount, 0);
+        const usagePercentage =
+          totalBudget > 0 ? Math.round((totalUsed / totalBudget) * 100) : 0;
+        return { walletName: w.name, totalBudget, totalUsed, usagePercentage, latestDate };
+      }),
+    );
+
+    // 最新活動日降順でソートし、上位3件を取得
+    const recentWalletSummaries: WalletSummary[] = walletDataList
+      .sort((a, b) => (b.latestDate > a.latestDate ? 1 : -1))
+      .slice(0, 3)
+      .map(({ walletName, totalBudget, totalUsed, usagePercentage }) => ({
+        walletName,
+        totalBudget,
+        totalUsed,
         usagePercentage,
-      };
-    }
+      }));
 
     return ok({
       normalWalletName,
@@ -98,7 +107,7 @@ export async function getDashboardData(deps: {
       totalUsed,
       totalUsagePercentage,
       categoryUsages,
-      recentWalletSummary,
+      recentWalletSummaries,
     });
   } catch (e) {
     return err(wrapUnknownError(e));

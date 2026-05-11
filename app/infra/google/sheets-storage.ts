@@ -103,7 +103,7 @@ export class GoogleSheetsStorage implements Storage {
   async getWallets(): Promise<Wallet[]> {
     try {
       const token = await this.getAccessToken();
-      const range = `${SHEET_NAMES.WALLET_MASTER}!A:B`;
+      const range = `${SHEET_NAMES.WALLET_MASTER}!A:C`;
       const url = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(range)}`;
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
@@ -117,9 +117,113 @@ export class GoogleSheetsStorage implements Storage {
         .map((row) => ({
           name: row[0],
           type: row[1] as "月次" | "一括",
+          settled: row[2] === "TRUE",
         }));
     } catch (err) {
       throw new GoogleSheetsError("財布マスタの取得に失敗しました", err);
+    }
+  }
+
+  async upsertWallet(wallet: Wallet): Promise<void> {
+    try {
+      const token = await this.getAccessToken();
+      const range = `${SHEET_NAMES.WALLET_MASTER}!A:C`;
+      const url = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(range)}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`Sheets read failed: ${res.status}`);
+      const data = (await res.json()) as { values?: string[][] };
+      const rows = data.values ?? [];
+      const rowIdx = rows.findIndex((row) => row[0] === wallet.name);
+
+      const cellValues = [
+        wallet.name,
+        wallet.type,
+        wallet.settled ? "TRUE" : "FALSE",
+      ];
+
+      if (rowIdx === -1) {
+        const appendRange = `${SHEET_NAMES.WALLET_MASTER}!A1`;
+        const appendUrl = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(appendRange)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+        const appendRes = await fetch(appendUrl, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            range: appendRange,
+            majorDimension: "ROWS",
+            values: [cellValues],
+          }),
+        });
+        if (!appendRes.ok)
+          throw new Error(
+            `Sheets append failed: ${appendRes.status} ${await appendRes.text()}`,
+          );
+      } else {
+        const updateRange = `${SHEET_NAMES.WALLET_MASTER}!A${rowIdx + 1}:C${rowIdx + 1}`;
+        const updateUrl = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(updateRange)}?valueInputOption=USER_ENTERED`;
+        const updateRes = await fetch(updateUrl, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            range: updateRange,
+            majorDimension: "ROWS",
+            values: [cellValues],
+          }),
+        });
+        if (!updateRes.ok)
+          throw new Error(
+            `Sheets update failed: ${updateRes.status} ${await updateRes.text()}`,
+          );
+      }
+    } catch (err) {
+      if (err instanceof GoogleSheetsError) throw err;
+      throw new GoogleSheetsError("財布マスタの更新に失敗しました", err);
+    }
+  }
+
+  async setWalletSettled(walletName: string, settled: boolean): Promise<void> {
+    try {
+      const token = await this.getAccessToken();
+      const range = `${SHEET_NAMES.WALLET_MASTER}!A:A`;
+      const url = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(range)}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`Sheets read failed: ${res.status}`);
+      const data = (await res.json()) as { values?: string[][] };
+      const rows = data.values ?? [];
+      const rowIdx = rows.findIndex((row) => row[0] === walletName);
+      if (rowIdx === -1)
+        throw new Error(`財布が見つかりません: ${walletName}`);
+
+      const cellRange = `${SHEET_NAMES.WALLET_MASTER}!C${rowIdx + 1}`;
+      const updateUrl = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(cellRange)}?valueInputOption=USER_ENTERED`;
+      const updateRes = await fetch(updateUrl, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          range: cellRange,
+          majorDimension: "ROWS",
+          values: [[settled ? "TRUE" : "FALSE"]],
+        }),
+      });
+      if (!updateRes.ok)
+        throw new Error(
+          `Sheets update failed: ${updateRes.status} ${await updateRes.text()}`,
+        );
+    } catch (err) {
+      if (err instanceof GoogleSheetsError) throw err;
+      throw new GoogleSheetsError("精算フラグの更新に失敗しました", err);
     }
   }
 

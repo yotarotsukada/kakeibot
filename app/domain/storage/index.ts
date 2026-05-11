@@ -25,6 +25,8 @@ export interface Storage {
   upsertBudgetRecord(record: BudgetRecord): Promise<void>;
   deleteBudgetRecord(walletName: string, categoryName: string): Promise<void>;
   getWallets(): Promise<Wallet[]>;
+  upsertWallet(wallet: Wallet): Promise<void>;
+  setWalletSettled(walletName: string, settled: boolean): Promise<void>;
   getCategories(): Promise<string[]>;
   getLedgerEntriesByWallet(walletName: string): Promise<LedgerEntry[]>;
   getLatestLedgerEntry(): Promise<{ walletName: string; date: string } | null>;
