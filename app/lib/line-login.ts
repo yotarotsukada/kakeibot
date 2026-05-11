@@ -35,10 +35,19 @@ export async function exchangeCodeForUserId(params: {
       client_secret: params.channelSecret,
     }),
   });
+  if (!tokenRes.ok) {
+    throw new Error(`LINE token exchange failed: ${tokenRes.status}`);
+  }
   const { access_token } = (await tokenRes.json()) as { access_token: string };
+  if (!access_token) throw new Error("access_token missing in LINE response");
+
   const profileRes = await fetch(PROFILE_URL, {
     headers: { Authorization: `Bearer ${access_token}` },
   });
+  if (!profileRes.ok) {
+    throw new Error(`LINE profile fetch failed: ${profileRes.status}`);
+  }
   const { userId } = (await profileRes.json()) as { userId: string };
+  if (!userId) throw new Error("userId missing in LINE profile response");
   return userId;
 }

@@ -24,12 +24,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   });
 
   const sessionToken = await createSessionToken(lineUserId, env.JWT_SECRET);
-  return redirect("/", {
-    headers: {
-      "Set-Cookie": [
-        sessionCookieHeader(sessionToken),
-        "oauth_state=; HttpOnly; Max-Age=0; Path=/",
-      ].join(", "),
-    },
-  });
+  const headers = new Headers();
+  headers.append("Set-Cookie", sessionCookieHeader(sessionToken));
+  headers.append("Set-Cookie", "oauth_state=; HttpOnly; Max-Age=0; Path=/");
+  return redirect("/", { headers });
 }
