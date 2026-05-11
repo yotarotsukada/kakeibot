@@ -2,7 +2,11 @@
  * インメモリモックストレージ（開発用）。
  */
 
-import type { BudgetRecord, Wallet } from "~/domain/budget/budget";
+import {
+  SPECIAL_WALLET_CATEGORY,
+  type BudgetRecord,
+  type Wallet,
+} from "~/domain/budget/budget";
 import type { LedgerEntry } from "~/domain/ledger/entry";
 import type { Storage } from "~/domain/storage";
 import { SHEET_NAMES } from "~/domain/storage";
@@ -13,9 +17,9 @@ const SEED_WALLETS: Wallet[] = [
   { name: "2026-05通常", type: "月次", settled: false },
   { name: "2026-04通常", type: "月次", settled: false },
   { name: "2026-03通常", type: "月次", settled: false },
-  { name: "沖縄旅行", type: "一括", settled: false },
-  { name: "新居家具", type: "一括", settled: false },
-  { name: "結婚記念旅行", type: "一括", settled: true },
+  { name: "沖縄旅行", type: "特別", settled: false },
+  { name: "新居家具", type: "特別", settled: false },
+  { name: "結婚記念旅行", type: "特別", settled: true },
 ];
 
 const SEED_CATEGORIES: string[] = [
@@ -35,10 +39,10 @@ const SEED_BUDGETS: BudgetRecord[] = [
   { walletName: "2026-05通常", categoryName: "外食費", amount: 20000 },
   { walletName: "2026-04通常", categoryName: "食費", amount: 48000 },
   { walletName: "2026-04通常", categoryName: "日用品費", amount: 28000 },
-  { walletName: "沖縄旅行", categoryName: "旅費", amount: 200000 },
-  { walletName: "新居家具", categoryName: "家具", amount: 150000 },
-  { walletName: "新居家具", categoryName: "家電", amount: 80000 },
-  { walletName: "結婚記念旅行", categoryName: "旅費", amount: 120000 },
+  // 特別財布は合計予算を1件（予約カテゴリ）で保持する
+  { walletName: "沖縄旅行", categoryName: SPECIAL_WALLET_CATEGORY, amount: 200000 },
+  { walletName: "新居家具", categoryName: SPECIAL_WALLET_CATEGORY, amount: 230000 },
+  { walletName: "結婚記念旅行", categoryName: SPECIAL_WALLET_CATEGORY, amount: 120000 },
 ];
 
 const SEED_LEDGER: StoredEntry[] = [

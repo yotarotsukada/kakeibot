@@ -113,11 +113,11 @@ export class GoogleSheetsStorage implements Storage {
       if (!data.values) return [];
       return data.values
         .slice(1)
-        .filter((row) => row[0] && (row[1] === "月次" || row[1] === "一括"))
+        .filter((row) => row[0] && (row[1] === "月次" || row[1] === "特別"))
         .map((row) => ({
           name: row[0],
-          type: row[1] as "月次" | "一括",
-          settled: row[2] === "TRUE",
+          type: row[1] as "月次" | "特別",
+          settled: row[1] === "特別" ? row[2] === "TRUE" : false,
         }));
     } catch (err) {
       throw new GoogleSheetsError("財布マスタの取得に失敗しました", err);
