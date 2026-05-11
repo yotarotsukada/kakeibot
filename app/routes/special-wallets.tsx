@@ -125,14 +125,17 @@ export default function SpecialWalletsPage() {
   return (
     <PageLayout>
       {/* ページヘッダー + 新規登録トリガー */}
-      <div className="flex items-center justify-between px-1">
-        <h1 className="text-lg font-bold text-foreground">財布</h1>
+      <div className="flex items-start justify-between px-1">
+        <div className="space-y-0.5">
+          <h1 className="text-lg font-bold text-foreground">財布</h1>
+          <p className="text-xs text-muted-foreground">臨時の出費を管理します</p>
+        </div>
         <Button
           type="button"
           variant="outline"
           size="sm"
           onClick={() => setShowNewForm((v) => !v)}
-          className="h-8 px-3 text-xs rounded-full shrink-0"
+          className="h-8 px-3 text-xs rounded-full shrink-0 mt-0.5"
         >
           {showNewForm ? "閉じる" : "+ 新規登録"}
         </Button>
@@ -366,8 +369,8 @@ function NewWalletForm({ onSuccess }: { onSuccess: () => void }) {
   const isSubmitting = createFetcher.state !== "idle";
 
   return (
-    <Card className="rounded-3xl px-5 py-5 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.15)]">
-      <createFetcher.Form method="post" className="space-y-3">
+    <Card className="rounded-3xl px-5 py-4 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.15)]">
+      <createFetcher.Form method="post" className="space-y-2.5">
         <input type="hidden" name="intent" value="create-wallet" />
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground block">
@@ -375,7 +378,7 @@ function NewWalletForm({ onSuccess }: { onSuccess: () => void }) {
           </label>
           <Input
             name="walletName"
-            placeholder="例: 沖縄旅行、新居家具"
+            placeholder="旅行や大きな買い物"
             className="h-9 text-sm rounded-2xl"
             required
           />
@@ -384,16 +387,16 @@ function NewWalletForm({ onSuccess }: { onSuccess: () => void }) {
           <label className="text-xs font-medium text-muted-foreground block">
             予算
           </label>
-          <div className="flex gap-2">
+          <div className="flex items-center justify-between">
             <MoneyInput
               name="budgetAmount"
-              wrapperClassName="flex-1"
+              wrapperClassName="w-36"
               className="h-9 text-sm rounded-2xl"
             />
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="h-9 px-4 text-sm rounded-2xl shrink-0"
+              className="h-9 px-4 text-sm rounded-2xl"
             >
               {isSubmitting ? "登録中…" : "登録"}
             </Button>

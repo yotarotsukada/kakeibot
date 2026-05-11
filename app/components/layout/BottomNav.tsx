@@ -37,18 +37,6 @@ export function BottomNav() {
           </>
         )}
       </NavLink>
-      <NavLink to="/special-wallets" className={navLinkClass}>
-        {({ isActive }) => (
-          <>
-            <HugeiconsIcon
-              icon={Wallet01Icon}
-              size={22}
-              strokeWidth={isActive ? 2 : 1.5}
-            />
-            <span>財布</span>
-          </>
-        )}
-      </NavLink>
       <NavLink to="/budget" className={navLinkClass}>
         {({ isActive }) => (
           <>
@@ -58,6 +46,18 @@ export function BottomNav() {
               strokeWidth={isActive ? 2 : 1.5}
             />
             <span>予算</span>
+          </>
+        )}
+      </NavLink>
+      <NavLink to="/special-wallets" className={navLinkClass}>
+        {({ isActive }) => (
+          <>
+            <HugeiconsIcon
+              icon={Wallet01Icon}
+              size={22}
+              strokeWidth={isActive ? 2 : 1.5}
+            />
+            <span>財布</span>
           </>
         )}
       </NavLink>
