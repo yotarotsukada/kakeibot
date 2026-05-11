@@ -49,10 +49,10 @@ function timingSafeEqual(a: string, b: string): boolean {
 export function parseAndExtractMessages(rawBody: string): ExtractedMessage[] {
   const parseResult = v.safeParse(LineWebhookBodySchema, JSON.parse(rawBody));
   if (!parseResult.success) {
-    throw new ValidationError(
-      `LINE Webhook ペイロードが不正です: ${JSON.stringify(v.flatten(parseResult.issues))}`,
-      parseResult.issues,
-    );
+    throw new ValidationError({
+      message: `LINE Webhook ペイロードが不正です: ${JSON.stringify(v.flatten(parseResult.issues))}`,
+      cause: parseResult.issues,
+    });
   }
 
   const body = parseResult.output;

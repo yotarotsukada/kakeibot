@@ -6,10 +6,17 @@ interface Env {
   USE_MOCK_LINE: string;
   USE_MOCK_AI: string;
   USE_MOCK_STORAGE: string;
+  USE_MOCK_AUTH: string;
 
   // ---- LINE Messaging API ----
   LINE_CHANNEL_SECRET: string;
   LINE_CHANNEL_ACCESS_TOKEN: string;
+
+  // ---- LINE Login OAuth ----
+  LINE_LOGIN_CHANNEL_ID: string;
+  LINE_LOGIN_CHANNEL_SECRET: string;
+  LINE_LOGIN_CALLBACK_URL: string;
+  JWT_SECRET: string;
 
   // ---- Gemini API ----
   GEMINI_API_KEY: string;

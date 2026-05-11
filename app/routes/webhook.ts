@@ -7,12 +7,10 @@
 
 import type { ReceiptParser } from "~/domain/ledger/receipt-parser";
 import type { LineClient } from "~/domain/line/client";
-import type { Storage } from "~/domain/storage";
 import { registerLedgerEntries } from "~/features/ledger/register";
+import { createStorage } from "~/infra/factory";
 import { GeminiReceiptParser } from "~/infra/gemini/receipt-parser";
 import { MockReceiptParser } from "~/infra/gemini/receipt-parser.mock";
-import { GoogleSheetsStorage } from "~/infra/google/sheets-storage";
-import { MockStorage } from "~/infra/google/sheets-storage.mock";
 import { GoogleLineClient } from "~/infra/line/client";
 import { MockLineClient } from "~/infra/line/client.mock";
 import {
@@ -33,16 +31,6 @@ function createReceiptParser(env: Env): ReceiptParser {
   return env.USE_MOCK_AI === "true"
     ? new MockReceiptParser()
     : new GeminiReceiptParser(env.GEMINI_API_KEY, env.GEMINI_MODEL);
-}
-
-function createStorage(env: Env): Storage {
-  return env.USE_MOCK_STORAGE === "true"
-    ? new MockStorage()
-    : new GoogleSheetsStorage(
-        env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-        env.GOOGLE_PRIVATE_KEY,
-        env.SPREADSHEET_ID,
-      );
 }
 
 // ---- Route ----
@@ -71,7 +59,16 @@ export async function action({ request, context }: Route.ActionArgs) {
     return new Response("Invalid signature", { status: 401 });
   }
 
-  const messages = parseAndExtractMessages(rawBody);
+  let messages: ReturnType<typeof parseAndExtractMessages>;
+  try {
+    messages = parseAndExtractMessages(rawBody);
+  } catch (err) {
+    console.error(
+      "[Webhook] ペイロード解析エラー（LINE リトライ防止のため 200 を返す）:",
+      err,
+    );
+    return new Response("OK", { status: 200 });
+  }
 
   ctx.waitUntil(
     registerLedgerEntries(messages, {

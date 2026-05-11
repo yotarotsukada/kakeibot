@@ -1,28 +1,29 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/inter";
 
-@custom-variant dark (&:is(.dark *));
+/*
+ * "Family Savings Cheer" — kakeibot Design System
+ * 家族で楽しく貯金するための明るく柔らかい UI 言語。
+ * 詳細は docs/DESIGN-SYSTEM.md を参照。
+ */
 
 @theme {
+  /* タイポグラフィ：丸ゴシックを基調に、家族向けの柔らかさを演出 */
   --font-sans:
-    "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
-    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-}
-
-html,
-body {
-  @apply bg-white dark:bg-gray-950;
-
-  @media (prefers-color-scheme: dark) {
-    color-scheme: dark;
-  }
+    "Zen Maru Gothic", "Nunito", "Hiragino Maru Gothic ProN",
+    "ヒラギノ丸ゴ ProN W4", -apple-system, BlinkMacSystemFont, system-ui,
+    sans-serif;
+  --font-display:
+    "Nunito", "Zen Maru Gothic", "Hiragino Maru Gothic ProN", -apple-system,
+    system-ui, sans-serif;
+  --font-numeric:
+    "Nunito", "Zen Maru Gothic", ui-rounded, system-ui, sans-serif;
 }
 
 @theme inline {
-  --font-heading: var(--font-sans);
-  --font-sans: "Inter Variable", sans-serif;
+  --font-heading: var(--font-display);
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -61,75 +62,64 @@ body {
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* "ふんわりパステル" カテゴリパレット — 家族向けの柔らかさ */
+  --color-category-1: oklch(0.72 0.1 230); /* sora 空 */
+  --color-category-2: oklch(0.74 0.1 165); /* mint 若葉 */
+  --color-category-3: oklch(0.74 0.1 295); /* lavender 藤 */
+  --color-category-4: oklch(0.85 0.11 95); /* butter 卵 */
+  --color-category-5: oklch(0.74 0.13 25); /* coral 珊瑚 */
+  --color-category-6: oklch(0.78 0.1 200); /* aqua 水 */
+  --color-category-7: oklch(0.78 0.11 60); /* apricot 杏 */
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
+  /* 朝の家族のキッチン — クリーム色。カード（pure white）との対比をはっきり付ける */
+  --background: oklch(0.97 0.014 70);
+  /* 文字は深いウォームグレー（純黒は冷たすぎる） */
+  --foreground: oklch(0.3 0.02 30);
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.3 0.02 30);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.3 0.02 30);
+
+  /* Coral Peach — 朝陽のような前向きで暖かい primary */
+  --primary: oklch(0.74 0.13 28);
+  --primary-foreground: oklch(0.99 0.005 70);
+
+  --secondary: oklch(0.96 0.012 60);
+  --secondary-foreground: oklch(0.4 0.02 30);
+  --muted: oklch(0.96 0.008 60);
+  --muted-foreground: oklch(0.55 0.02 30);
+  --accent: oklch(0.92 0.04 28);
+  --accent-foreground: oklch(0.4 0.02 30);
+
+  /* Soft red — 怒らない、優しく注意を促す */
+  --destructive: oklch(0.66 0.15 25);
+
+  --border: oklch(0.93 0.008 60);
+  --input: oklch(0.96 0.008 60);
+  --ring: oklch(0.74 0.13 28);
+
+  /* チャート用：カテゴリパレットと同じトーン */
+  --chart-1: oklch(0.72 0.1 230);
+  --chart-2: oklch(0.74 0.1 165);
+  --chart-3: oklch(0.74 0.1 295);
+  --chart-4: oklch(0.85 0.11 95);
+  --chart-5: oklch(0.74 0.13 25);
+
+  /* 角 R を 1rem に増やし、柔らかい印象を強化 */
+  --radius: 1rem;
+
+  --sidebar: oklch(0.99 0.005 70);
+  --sidebar-foreground: oklch(0.3 0.02 30);
+  --sidebar-primary: oklch(0.74 0.13 28);
+  --sidebar-primary-foreground: oklch(0.99 0.005 70);
+  --sidebar-accent: oklch(0.92 0.04 28);
+  --sidebar-accent-foreground: oklch(0.4 0.02 30);
+  --sidebar-border: oklch(0.93 0.008 60);
+  --sidebar-ring: oklch(0.74 0.13 28);
 }
 
 @layer base {
@@ -138,8 +128,17 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "palt" 1;
   }
   html {
     @apply font-sans;
+    scrollbar-gutter: stable;
+  }
+  /* 数字専用：tabular-nums + lining figures */
+  .font-numeric {
+    font-family: var(--font-numeric);
+    font-feature-settings:
+      "tnum" 1,
+      "lnum" 1;
   }
 }

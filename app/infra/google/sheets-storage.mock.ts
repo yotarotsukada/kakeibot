@@ -2,16 +2,164 @@
  * インメモリモックストレージ（開発用）。
  */
 
+import type { BudgetRecord, Wallet } from "~/domain/budget/budget";
 import type { LedgerEntry } from "~/domain/ledger/entry";
 import type { Storage } from "~/domain/storage";
 import { SHEET_NAMES } from "~/domain/storage";
 
+type StoredEntry = LedgerEntry & { transactionId: string };
+
+const SEED_WALLETS: Wallet[] = [
+  { name: "2026-05通常", type: "月次" },
+  { name: "2026-04通常", type: "月次" },
+  { name: "2026-03通常", type: "月次" },
+  { name: "沖縄旅行", type: "一括" },
+];
+
+const SEED_CATEGORIES: string[] = [
+  "食費",
+  "日用品費",
+  "交通費",
+  "外食費",
+  "医療費",
+  "娯楽費",
+  "通信費",
+];
+
+const SEED_BUDGETS: BudgetRecord[] = [
+  { walletName: "2026-05通常", categoryName: "食費", amount: 50000 },
+  { walletName: "2026-05通常", categoryName: "日用品費", amount: 30000 },
+  { walletName: "2026-05通常", categoryName: "交通費", amount: 10000 },
+  { walletName: "2026-05通常", categoryName: "外食費", amount: 20000 },
+  { walletName: "2026-04通常", categoryName: "食費", amount: 48000 },
+  { walletName: "2026-04通常", categoryName: "日用品費", amount: 28000 },
+  { walletName: "沖縄旅行", categoryName: "旅費", amount: 200000 },
+];
+
+const SEED_LEDGER: StoredEntry[] = [
+  {
+    transactionId: "seed-001",
+    date: "2026-05-01",
+    type: "支出",
+    amount: 12000,
+    actor: "A",
+    category: "食費",
+    wallet: "2026-05通常",
+    shouldSettle: true,
+    memo: "スーパー",
+  },
+  {
+    transactionId: "seed-002",
+    date: "2026-05-02",
+    type: "支出",
+    amount: 5000,
+    actor: "B",
+    category: "日用品費",
+    wallet: "2026-05通常",
+    shouldSettle: true,
+    memo: "ドラッグストア",
+  },
+  {
+    transactionId: "seed-003",
+    date: "2026-05-03",
+    type: "支出",
+    amount: 8000,
+    actor: "A",
+    category: "食費",
+    wallet: "2026-05通常",
+    shouldSettle: true,
+    memo: "肉屋",
+  },
+  {
+    transactionId: "seed-004",
+    date: "2026-05-04",
+    type: "支出",
+    amount: 3000,
+    actor: "B",
+    category: "交通費",
+    wallet: "2026-05通常",
+    shouldSettle: true,
+    memo: "電車定期",
+  },
+  {
+    transactionId: "seed-005",
+    date: "2026-05-05",
+    type: "支出",
+    amount: 25000,
+    actor: "A",
+    category: "外食費",
+    wallet: "2026-05通常",
+    shouldSettle: true,
+    memo: "記念日ディナー",
+  },
+  {
+    transactionId: "seed-006",
+    date: "2026-05-05",
+    type: "支出",
+    amount: 15000,
+    actor: "B",
+    category: "食費",
+    wallet: "2026-05通常",
+    shouldSettle: true,
+    memo: "週末の買い出し",
+  },
+  // 沖縄旅行（最も直近のエントリ）
+  {
+    transactionId: "seed-007",
+    date: "2026-05-06",
+    type: "支出",
+    amount: 80000,
+    actor: "A",
+    category: "旅費",
+    wallet: "沖縄旅行",
+    shouldSettle: true,
+    memo: "航空券2名分",
+  },
+  // 2026-04通常 の履歴
+  {
+    transactionId: "seed-008",
+    date: "2026-04-10",
+    type: "支出",
+    amount: 30000,
+    actor: "A",
+    category: "食費",
+    wallet: "2026-04通常",
+    shouldSettle: true,
+    memo: "月中の食料品",
+  },
+  {
+    transactionId: "seed-009",
+    date: "2026-04-20",
+    type: "支出",
+    amount: 15000,
+    actor: "B",
+    category: "日用品費",
+    wallet: "2026-04通常",
+    shouldSettle: true,
+    memo: "家電消耗品",
+  },
+  {
+    transactionId: "seed-010",
+    date: "2026-04-28",
+    type: "支出",
+    amount: 52000,
+    actor: "A",
+    category: "食費",
+    wallet: "2026-04通常",
+    shouldSettle: true,
+    memo: "月末まとめ買い",
+  },
+];
+
 export class MockStorage implements Storage {
-  private ledger: Array<LedgerEntry & { transactionId: string }> = [];
+  private ledger: StoredEntry[] = [...SEED_LEDGER];
   private users = new Map<string, string>([
     ["U_MOCK_USER_A", "A"],
     ["U_MOCK_USER_B", "B"],
   ]);
+  private wallets: Wallet[] = [...SEED_WALLETS];
+  private categories: string[] = [...SEED_CATEGORIES];
+  private budgets: BudgetRecord[] = [...SEED_BUDGETS];
 
   async initialize(): Promise<void> {
     console.log("[MockStorage] 🗄️  初期化:");
@@ -34,5 +182,54 @@ export class MockStorage implements Storage {
     const actor = this.users.get(userId) ?? null;
     console.log(`[MockStorage] 👤 ${userId} → ${actor ?? "未登録"}`);
     return actor;
+  }
+
+  async getBudgetRecords(walletName: string): Promise<BudgetRecord[]> {
+    return this.budgets.filter((b) => b.walletName === walletName);
+  }
+
+  async upsertBudgetRecord(record: BudgetRecord): Promise<void> {
+    const idx = this.budgets.findIndex(
+      (b) =>
+        b.walletName === record.walletName &&
+        b.categoryName === record.categoryName,
+    );
+    if (idx >= 0) {
+      this.budgets[idx] = record;
+    } else {
+      this.budgets.push(record);
+    }
+  }
+
+  async deleteBudgetRecord(
+    walletName: string,
+    categoryName: string,
+  ): Promise<void> {
+    this.budgets = this.budgets.filter(
+      (b) => !(b.walletName === walletName && b.categoryName === categoryName),
+    );
+  }
+
+  async getWallets(): Promise<Wallet[]> {
+    return this.wallets;
+  }
+
+  async getCategories(): Promise<string[]> {
+    return this.categories;
+  }
+
+  async getLedgerEntriesByWallet(walletName: string): Promise<LedgerEntry[]> {
+    return this.ledger.filter((e) => e.wallet === walletName);
+  }
+
+  async getLatestLedgerEntry(): Promise<{
+    walletName: string;
+    date: string;
+  } | null> {
+    if (this.ledger.length === 0) return null;
+    const latest = this.ledger.reduce((prev, cur) =>
+      cur.date > prev.date ? cur : prev,
+    );
+    return { walletName: latest.wallet, date: latest.date };
   }
 }
