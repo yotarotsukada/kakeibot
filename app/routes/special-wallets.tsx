@@ -1,5 +1,6 @@
 import { Tick02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { useState } from "react";
 import {
   redirect,
   useActionData,
@@ -103,9 +104,11 @@ export async function action({
 }
 
 export default function SpecialWalletsPage() {
-  const { wallets, categories, filter } = useLoaderData<typeof loader>();
+  const { wallets, categories, filter: initialFilter } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>() as ActionError | undefined;
   useActionErrorToast(actionData);
+
+  const [filter, setFilter] = useState<FilterType>(initialFilter);
 
   const filteredWallets = wallets.filter((item) => {
     if (filter === "unsettled") return !item.wallet.settled;
@@ -123,7 +126,7 @@ export default function SpecialWalletsPage() {
       </div>
 
       {/* フィルタータブ */}
-      <FilterTabs filter={filter} />
+      <FilterTabs filter={filter} onFilterChange={setFilter} />
 
       {/* 財布一覧 */}
       {filteredWallets.length === 0 ? (
@@ -154,7 +157,13 @@ export default function SpecialWalletsPage() {
   );
 }
 
-function FilterTabs({ filter }: { filter: FilterType }) {
+function FilterTabs({
+  filter,
+  onFilterChange,
+}: {
+  filter: FilterType;
+  onFilterChange: (f: FilterType) => void;
+}) {
   const tabs: { value: FilterType; label: string }[] = [
     { value: "unsettled", label: "未精算" },
     { value: "settled", label: "精算済み" },
@@ -164,9 +173,10 @@ function FilterTabs({ filter }: { filter: FilterType }) {
   return (
     <div className="flex gap-1 bg-muted/50 rounded-2xl p-1">
       {tabs.map((tab) => (
-        <a
+        <button
           key={tab.value}
-          href={`/special-wallets?filter=${tab.value}`}
+          type="button"
+          onClick={() => onFilterChange(tab.value)}
           className={cn(
             "flex-1 text-center text-xs font-semibold py-2 rounded-xl transition-all",
             filter === tab.value
@@ -175,7 +185,7 @@ function FilterTabs({ filter }: { filter: FilterType }) {
           )}
         >
           {tab.label}
-        </a>
+        </button>
       ))}
     </div>
   );
