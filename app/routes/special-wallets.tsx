@@ -8,8 +8,10 @@ import {
   useLoaderData,
   useNavigation,
 } from "react-router";
-import { getCategoryColor } from "~/components/features/wallet/categoryColors";
-import { SPECIAL_WALLET_ACCENT_COLOR } from "~/components/features/wallet/categoryColors";
+import {
+  SPECIAL_WALLET_ACCENT_COLOR,
+  getCategoryColor,
+} from "~/components/features/wallet/categoryColors";
 import { PageLayout } from "~/components/layout/PageLayout";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
@@ -66,7 +68,6 @@ export async function action({
     const walletName = String(formData.get("walletName") ?? "");
     const result = await createSpecialWallet(walletName, { storage });
     if (!result.ok) return actionError(result.error);
-    // redirect を使わず null を返してフェッチャーにローダー再検証させる
     return null;
   }
 
@@ -75,7 +76,6 @@ export async function action({
     const settled = formData.get("settled") === "true";
     const result = await toggleWalletSettled(walletName, settled, { storage });
     if (!result.ok) return actionError(result.error);
-    // redirect しない → フェッチャーがローダーを自動再検証する
     return null;
   }
 
@@ -193,17 +193,17 @@ function FilterTabs({
   ];
 
   return (
-    <div className="flex gap-1 bg-muted/50 rounded-2xl p-1">
+    <div className="flex gap-0.5 bg-foreground/[0.04] ring-1 ring-foreground/[0.05] rounded-2xl p-1">
       {tabs.map((tab) => (
         <button
           key={tab.value}
           type="button"
           onClick={() => onFilterChange(tab.value)}
           className={cn(
-            "flex-1 text-center text-xs font-semibold py-2 rounded-xl transition-all",
+            "flex-1 text-center text-xs font-semibold py-2 rounded-xl transition-all duration-200",
             filter === tab.value
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
+              ? "bg-background text-foreground ring-1 ring-foreground/[0.06] shadow-[0_1px_6px_-2px_oklch(0.30_0.02_30_/_0.12)]"
+              : "text-muted-foreground/60 hover:text-foreground/70",
           )}
         >
           {tab.label}
@@ -233,53 +233,60 @@ function SpecialWalletCard({
 
   const settleFetcher = useFetcher<ActionError | null>();
 
-  // フォームデータから楽観的な精算状態を導出する。
-  // サーバー応答を待たず即時に UI を切り替えるためにフェッチャーの formData を参照する。
-  const isPending =
+  // 楽観的更新は使わず、ローダー確定値で状態を持つ。
+  // ボタンの処理中アニメーションがユーザーへのフィードバック。
+  const isSettled = wallet.settled ?? false;
+  const isSettling =
     settleFetcher.state !== "idle" &&
     settleFetcher.formData?.get("intent") === "toggle-settled";
-  const isSettled: boolean = isPending
-    ? settleFetcher.formData?.get("settled") === "true"
-    : (wallet.settled ?? false);
 
   const remaining = totalBudget - totalUsed;
   const isOver = remaining < 0;
 
+  // 精算完了時はプログレスバーを無彩色にして「完了感」を演出する
+  const barColor = isSettled
+    ? "oklch(0.72 0.02 265)"
+    : isOver
+      ? "oklch(0.66 0.15 25)"
+      : SPECIAL_WALLET_ACCENT_COLOR;
+
   return (
     <Card
       className={cn(
-        "rounded-3xl gap-0 py-0 ring-1 shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.15)] transition-colors duration-300",
+        "rounded-3xl gap-0 py-0 ring-1 shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.15)]",
+        // transition-all でローダー更新後のスタイル変化をアニメーションさせる
+        "transition-all duration-500",
         isSettled
-          ? "ring-foreground/[0.04] bg-muted/30"
-          : "ring-foreground/[0.06]",
+          ? "opacity-60 ring-foreground/[0.04]"
+          : "opacity-100 ring-foreground/[0.06]",
       )}
     >
-      {/* ヘッダー */}
-      <div className="px-6 pt-5 pb-4">
-        <div className="flex items-start justify-between gap-3 mb-3">
+      {/* Hero: 残り金額 */}
+      <div className="px-6 pt-5 pb-6">
+        {/* ヘッダー行: 財布名 + 精算完了バッジ / 精算ボタン */}
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 min-w-0">
-            {isSettled && (
-              <HugeiconsIcon
-                icon={Tick02Icon}
-                size={14}
-                className="text-emerald-600 shrink-0"
-                strokeWidth={2}
-              />
-            )}
-            <p
-              className={cn(
-                "text-sm font-semibold truncate",
-                isSettled ? "text-foreground/50" : "text-foreground",
-              )}
-            >
+            <p className="text-xs font-medium text-foreground/70 truncate">
               {wallet.name}
             </p>
+            {/* 精算完了バッジ（精算済み財布にのみ表示） */}
+            {isSettled && (
+              <span className="inline-flex items-center gap-1 shrink-0 text-[10px] font-medium text-muted-foreground/80 bg-foreground/[0.06] rounded-full px-2 py-0.5">
+                <HugeiconsIcon
+                  icon={Tick02Icon}
+                  size={10}
+                  strokeWidth={2.5}
+                  className="opacity-70"
+                />
+                精算完了
+              </span>
+            )}
           </div>
 
-          {/* 精算トグルボタン（useFetcher で送信） */}
+          {/* 精算トグルボタン */}
           <button
             type="button"
-            disabled={isPending}
+            disabled={isSettling}
             onClick={() =>
               settleFetcher.submit(
                 {
@@ -291,85 +298,63 @@ function SpecialWalletCard({
               )
             }
             className={cn(
-              "shrink-0 h-7 px-3 text-[11px] font-semibold rounded-full border transition-all",
-              isSettled
-                ? "text-muted-foreground border-border/60 hover:text-foreground bg-transparent"
-                : "text-emerald-700 border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100/60",
-              isPending && "opacity-50 cursor-not-allowed",
+              "shrink-0 h-7 px-3 text-[11px] font-semibold rounded-full border transition-all duration-200",
+              isSettling
+                ? "animate-pulse text-muted-foreground/50 border-border/40 cursor-wait"
+                : isSettled
+                  ? "text-muted-foreground/60 border-border/50 hover:text-foreground/80 hover:border-border"
+                  : "text-foreground/75 border-foreground/20 bg-foreground/[0.04] hover:bg-foreground/[0.08]",
             )}
           >
-            {isSettled ? "未精算に戻す" : "精算完了"}
+            {isSettling ? "処理中…" : isSettled ? "未精算に戻す" : "精算完了"}
           </button>
         </div>
 
-        {/* 未精算: 残り金額 + プログレスバー */}
-        {!isSettled && (
-          <>
-            <p className="text-[11px] text-muted-foreground/80 mb-1">
-              {isOver ? "オーバー" : "残り"}
+        {/* 残り金額（精算完了・未精算で同じレイアウト） */}
+        <p className="text-[11px] text-muted-foreground/80 mb-1">
+          {isOver ? "オーバー" : "残り"}
+        </p>
+        <p
+          className={cn(
+            "font-numeric text-[2.5rem] font-extrabold leading-none tracking-tight tabular-nums",
+            isOver ? "text-destructive" : "text-foreground",
+          )}
+        >
+          <span className="text-2xl font-bold mr-0.5 align-baseline opacity-70">
+            ¥
+          </span>
+          {Math.abs(remaining).toLocaleString()}
+        </p>
+
+        {/* プログレスバー */}
+        <div className="mt-4 h-1.5 bg-foreground/8 rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-500 ease-out"
+            style={{
+              width: `${Math.min(usagePercentage, 100)}%`,
+              backgroundColor: barColor,
+            }}
+          />
+        </div>
+
+        {/* 使用 / 予算 */}
+        <div className="mt-2.5 flex justify-between">
+          <div>
+            <p className="font-numeric text-xs tabular-nums text-muted-foreground">
+              ¥{totalUsed.toLocaleString()}
             </p>
-            <p
-              className={cn(
-                "font-numeric text-[2rem] font-extrabold leading-none tracking-tight tabular-nums mb-4",
-                isOver ? "text-destructive" : "text-foreground",
-              )}
-            >
-              <span className="text-xl font-bold mr-0.5 align-baseline opacity-70">
-                ¥
-              </span>
-              {Math.abs(remaining).toLocaleString()}
-            </p>
-
-            <div className="h-1.5 bg-foreground/8 rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-500 ease-out"
-                style={{
-                  width: `${Math.min(usagePercentage, 100)}%`,
-                  backgroundColor: isOver
-                    ? "oklch(0.66 0.15 25)"
-                    : SPECIAL_WALLET_ACCENT_COLOR,
-                }}
-              />
-            </div>
-
-            <div className="mt-2 flex justify-between">
-              <p className="font-numeric text-xs tabular-nums text-muted-foreground">
-                ¥{totalUsed.toLocaleString()}
-                <span className="text-[10px] ml-1 text-muted-foreground/60">
-                  使用
-                </span>
-              </p>
-              <p className="font-numeric text-xs tabular-nums text-muted-foreground">
-                ¥{totalBudget.toLocaleString()}
-                <span className="text-[10px] ml-1 text-muted-foreground/60">
-                  予算
-                </span>
-              </p>
-            </div>
-          </>
-        )}
-
-        {/* 精算完了: 使用額・予算・差分の概要 */}
-        {isSettled && (
-          <div className="space-y-1.5 mt-1">
-            <SettledSummaryRow
-              label="使用"
-              value={totalUsed}
-              dimmed
-            />
-            <SettledSummaryRow label="予算" value={totalBudget} dimmed />
-            {totalBudget > 0 && (
-              <SettledSummaryRow
-                label={isOver ? "超過" : "余り"}
-                value={Math.abs(remaining)}
-                accent={isOver ? "over" : "under"}
-              />
-            )}
+            <p className="text-[10px] text-muted-foreground/60 mt-0.5">使用</p>
           </div>
-        )}
+          <div className="text-right">
+            <p className="font-numeric text-xs tabular-nums text-muted-foreground">
+              ¥{totalBudget.toLocaleString()}
+            </p>
+            <p className="text-[10px] text-muted-foreground/60 mt-0.5">予算</p>
+          </div>
+        </div>
       </div>
 
-      {/* カテゴリ予算編集（未精算のみ） */}
+      {/* カテゴリ予算編集（未精算のみ表示） */}
       {!isSettled && (
         <>
           <Separator className="opacity-60" />
@@ -397,47 +382,6 @@ function SpecialWalletCard({
         </>
       )}
     </Card>
-  );
-}
-
-function SettledSummaryRow({
-  label,
-  value,
-  dimmed,
-  accent,
-}: {
-  label: string;
-  value: number;
-  dimmed?: boolean;
-  accent?: "over" | "under";
-}) {
-  return (
-    <div className="flex items-center justify-between">
-      <span
-        className={cn(
-          "text-[11px]",
-          dimmed
-            ? "text-muted-foreground/50"
-            : accent === "over"
-              ? "text-destructive/70 font-semibold"
-              : "text-emerald-700/80 font-semibold",
-        )}
-      >
-        {label}
-      </span>
-      <span
-        className={cn(
-          "font-numeric text-xs tabular-nums",
-          dimmed
-            ? "text-muted-foreground/50"
-            : accent === "over"
-              ? "text-destructive/70 font-semibold"
-              : "text-emerald-700/80 font-semibold",
-        )}
-      >
-        ¥{value.toLocaleString()}
-      </span>
-    </div>
   );
 }
 
@@ -564,7 +508,6 @@ function NewWalletForm({
   const inputRef = useRef<HTMLInputElement>(null);
   const prevState = useRef(createFetcher.state);
 
-  // 送信完了（idle に戻った）かつエラーがなければフォームを閉じる
   useEffect(() => {
     if (
       prevState.current !== "idle" &&
