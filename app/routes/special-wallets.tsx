@@ -214,6 +214,9 @@ function SpecialWalletCard({ item }: { item: WalletItem }) {
   const settleFetcher = useFetcher<ActionError | null>();
   const budgetFetcher = useFetcher<ActionError | null>();
 
+  useActionErrorToast(settleFetcher.data as ActionError | undefined);
+  useActionErrorToast(budgetFetcher.data as ActionError | undefined);
+
   const isSettled = wallet.settled;
   const isSettling =
     settleFetcher.state !== "idle" &&
