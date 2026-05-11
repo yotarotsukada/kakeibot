@@ -2,24 +2,17 @@ import { Tick02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useEffect, useRef, useState } from "react";
 import {
-  redirect,
   useActionData,
   useFetcher,
   useLoaderData,
-  useNavigation,
 } from "react-router";
-import {
-  SPECIAL_WALLET_ACCENT_COLOR,
-  getCategoryColor,
-} from "~/components/features/wallet/categoryColors";
+import { SPECIAL_WALLET_ACCENT_COLOR } from "~/components/features/wallet/categoryColors";
 import { PageLayout } from "~/components/layout/PageLayout";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
-import { Separator } from "~/components/ui/separator";
 import { ValidationError } from "~/domain/errors";
 import { unwrap } from "~/domain/result";
-import { deleteBudget, upsertBudget } from "~/features/budget/manage";
 import {
   createSpecialWallet,
   getSpecialWalletsPageData,
@@ -46,17 +39,14 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   await requireAuth(request, env);
   const storage = createStorage(env);
 
-  const url = new URL(request.url);
-  const filter = (url.searchParams.get("filter") ?? "unsettled") as FilterType;
-
   const data = unwrap(await getSpecialWalletsPageData({ storage }));
-  return { ...data, filter };
+  return data;
 }
 
 export async function action({
   request,
   context,
-}: Route.ActionArgs): Promise<ActionError | Response | null> {
+}: Route.ActionArgs): Promise<ActionError | null> {
   const { env } = (context as { cloudflare: { env: Env } }).cloudflare;
   await requireAuth(request, env);
   const storage = createStorage(env);
@@ -79,25 +69,6 @@ export async function action({
     return null;
   }
 
-  if (intent === "upsert-budget") {
-    const walletName = String(formData.get("walletName") ?? "");
-    const categoryName = String(formData.get("categoryName") ?? "");
-    const amount = Number(formData.get("amount"));
-    const result = await upsertBudget(walletName, categoryName, amount, {
-      storage,
-    });
-    if (!result.ok) return actionError(result.error);
-    return redirect("/special-wallets");
-  }
-
-  if (intent === "delete-budget") {
-    const walletName = String(formData.get("walletName") ?? "");
-    const categoryName = String(formData.get("categoryName") ?? "");
-    const result = await deleteBudget(walletName, categoryName, { storage });
-    if (!result.ok) return actionError(result.error);
-    return redirect("/special-wallets");
-  }
-
   return actionError(
     new ValidationError({
       message: `unknown intent: ${intent}`,
@@ -107,12 +78,11 @@ export async function action({
 }
 
 export default function SpecialWalletsPage() {
-  const { wallets, categories, filter: initialFilter } =
-    useLoaderData<typeof loader>();
+  const { wallets } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>() as ActionError | undefined;
   useActionErrorToast(actionData);
 
-  const [filter, setFilter] = useState<FilterType>(initialFilter);
+  const [filter, setFilter] = useState<FilterType>("unsettled");
   const [showNewForm, setShowNewForm] = useState(false);
 
   const filteredWallets = wallets.filter((item) => {
@@ -143,12 +113,7 @@ export default function SpecialWalletsPage() {
       </div>
 
       {/* 新規登録フォーム（ヘッダー直下に展開） */}
-      {showNewForm && (
-        <NewWalletForm
-          categories={categories}
-          onSuccess={() => setShowNewForm(false)}
-        />
-      )}
+      {showNewForm && <NewWalletForm onSuccess={() => setShowNewForm(false)} />}
 
       {/* フィルタータブ */}
       <FilterTabs filter={filter} onFilterChange={setFilter} />
@@ -167,11 +132,7 @@ export default function SpecialWalletsPage() {
       ) : (
         <div className="space-y-4">
           {filteredWallets.map((item) => (
-            <SpecialWalletCard
-              key={item.wallet.name}
-              item={item}
-              categories={categories}
-            />
+            <SpecialWalletCard key={item.wallet.name} item={item} />
           ))}
         </div>
       )}
@@ -214,28 +175,18 @@ function FilterTabs({
 }
 
 type WalletItem = {
-  wallet: { name: string; type: "月次" | "一括"; settled?: boolean };
+  wallet: { name: string; type: "月次" | "特別"; settled: boolean };
   totalBudget: number;
   totalUsed: number;
   usagePercentage: number;
-  budgetRecords: { walletName: string; categoryName: string; amount: number }[];
 };
 
-function SpecialWalletCard({
-  item,
-  categories,
-}: {
-  item: WalletItem;
-  categories: string[];
-}) {
-  const { wallet, totalBudget, totalUsed, usagePercentage, budgetRecords } =
-    item;
+function SpecialWalletCard({ item }: { item: WalletItem }) {
+  const { wallet, totalBudget, totalUsed, usagePercentage } = item;
 
   const settleFetcher = useFetcher<ActionError | null>();
 
-  // 楽観的更新は使わず、ローダー確定値で状態を持つ。
-  // ボタンの処理中アニメーションがユーザーへのフィードバック。
-  const isSettled = wallet.settled ?? false;
+  const isSettled = wallet.settled;
   const isSettling =
     settleFetcher.state !== "idle" &&
     settleFetcher.formData?.get("intent") === "toggle-settled";
@@ -261,7 +212,6 @@ function SpecialWalletCard({
           : "opacity-100 ring-foreground/[0.06]",
       )}
     >
-      {/* Hero: 残り金額 */}
       <div className="px-6 pt-5 pb-6">
         {/* ヘッダー行: 財布名 + 精算完了バッジ / 精算ボタン */}
         <div className="flex items-center justify-between mb-3">
@@ -269,7 +219,6 @@ function SpecialWalletCard({
             <p className="text-xs font-medium text-foreground/70 truncate">
               {wallet.name}
             </p>
-            {/* 精算完了バッジ（精算済み財布にのみ表示） */}
             {isSettled && (
               <span className="inline-flex items-center gap-1 shrink-0 text-[10px] font-medium text-muted-foreground/80 bg-foreground/[0.06] rounded-full px-2 py-0.5">
                 <HugeiconsIcon
@@ -283,7 +232,6 @@ function SpecialWalletCard({
             )}
           </div>
 
-          {/* 精算トグルボタン */}
           <button
             type="button"
             disabled={isSettling}
@@ -310,7 +258,7 @@ function SpecialWalletCard({
           </button>
         </div>
 
-        {/* 残り金額（精算完了・未精算で同じレイアウト） */}
+        {/* 残り金額 */}
         <p className="text-[11px] text-muted-foreground/80 mb-1">
           {isOver ? "オーバー" : "残り"}
         </p>
@@ -353,157 +301,11 @@ function SpecialWalletCard({
           </div>
         </div>
       </div>
-
-      {/* カテゴリ予算編集（未精算のみ表示） */}
-      {!isSettled && (
-        <>
-          <Separator className="opacity-60" />
-          <div className="px-6 pt-4 pb-5">
-            <p className="text-[11px] font-medium text-muted-foreground/80 mb-3">
-              予算カテゴリ
-            </p>
-            {budgetRecords.length > 0 && (
-              <div className="space-y-2 mb-3">
-                {budgetRecords.map((record, i) => (
-                  <BudgetEditRow
-                    key={record.categoryName}
-                    record={record}
-                    color={getCategoryColor(i)}
-                  />
-                ))}
-              </div>
-            )}
-            <AddBudgetForm
-              walletName={wallet.name}
-              categories={categories}
-              existingCategories={budgetRecords.map((r) => r.categoryName)}
-            />
-          </div>
-        </>
-      )}
     </Card>
   );
 }
 
-function BudgetEditRow({
-  record,
-  color,
-}: {
-  record: { walletName: string; categoryName: string; amount: number };
-  color: string;
-}) {
-  const navigation = useNavigation();
-  const isSubmitting = navigation.state === "submitting";
-
-  return (
-    <div className="flex items-center gap-2">
-      <span
-        className="size-2 rounded-full shrink-0"
-        style={{ backgroundColor: color }}
-      />
-      <span className="text-xs text-foreground/80 flex-1 truncate">
-        {record.categoryName}
-      </span>
-      <form method="post" className="flex items-center gap-1">
-        <input type="hidden" name="intent" value="upsert-budget" />
-        <input type="hidden" name="walletName" value={record.walletName} />
-        <input type="hidden" name="categoryName" value={record.categoryName} />
-        <Input
-          name="amount"
-          type="number"
-          defaultValue={record.amount}
-          min={0}
-          className="h-7 w-24 text-xs text-right rounded-lg px-2 tabular-nums"
-        />
-        <Button
-          type="submit"
-          variant="ghost"
-          size="sm"
-          disabled={isSubmitting}
-          className="h-7 px-2 text-[11px] text-primary"
-        >
-          更新
-        </Button>
-      </form>
-      <form method="post">
-        <input type="hidden" name="intent" value="delete-budget" />
-        <input type="hidden" name="walletName" value={record.walletName} />
-        <input type="hidden" name="categoryName" value={record.categoryName} />
-        <Button
-          type="submit"
-          variant="ghost"
-          size="sm"
-          disabled={isSubmitting}
-          className="h-7 px-2 text-[11px] text-destructive/70 hover:text-destructive"
-        >
-          削除
-        </Button>
-      </form>
-    </div>
-  );
-}
-
-function AddBudgetForm({
-  walletName,
-  categories,
-  existingCategories,
-}: {
-  walletName: string;
-  categories: string[];
-  existingCategories: string[];
-}) {
-  const navigation = useNavigation();
-  const isSubmitting = navigation.state === "submitting";
-  const available = categories.filter((c) => !existingCategories.includes(c));
-
-  return (
-    <form method="post" className="flex items-center gap-2">
-      <input type="hidden" name="intent" value="upsert-budget" />
-      <input type="hidden" name="walletName" value={walletName} />
-      {available.length > 0 ? (
-        <select
-          name="categoryName"
-          className="flex-1 h-7 text-xs rounded-lg border border-input bg-background px-2 text-foreground"
-        >
-          {available.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-      ) : (
-        <Input
-          name="categoryName"
-          placeholder="カテゴリ名"
-          className="flex-1 h-7 text-xs rounded-lg"
-        />
-      )}
-      <Input
-        name="amount"
-        type="number"
-        placeholder="金額"
-        min={0}
-        className="h-7 w-24 text-xs text-right rounded-lg px-2 tabular-nums"
-      />
-      <Button
-        type="submit"
-        size="sm"
-        disabled={isSubmitting}
-        className="h-7 px-3 text-[11px] rounded-full shrink-0"
-      >
-        追加
-      </Button>
-    </form>
-  );
-}
-
-function NewWalletForm({
-  categories: _categories,
-  onSuccess,
-}: {
-  categories: string[];
-  onSuccess: () => void;
-}) {
+function NewWalletForm({ onSuccess }: { onSuccess: () => void }) {
   const createFetcher = useFetcher<ActionError | null>();
   const inputRef = useRef<HTMLInputElement>(null);
   const prevState = useRef(createFetcher.state);
