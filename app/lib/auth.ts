@@ -1,4 +1,4 @@
-import { SignJWT, jwtVerify } from "jose";
+import { jwtVerify, SignJWT } from "jose";
 import { redirect } from "react-router";
 
 function key(secret: string) {
@@ -22,10 +22,7 @@ export function sessionCookieHeader(token: string): string {
   return `session=${token}; HttpOnly; Secure; SameSite=Lax; Max-Age=${30 * 24 * 3600}; Path=/`;
 }
 
-export async function requireAuth(
-  request: Request,
-  env: Env,
-): Promise<string> {
+export async function requireAuth(request: Request, env: Env): Promise<string> {
   if (env.USE_MOCK_AUTH === "true") return "U_MOCK_USER_A";
   const cookie = request.headers.get("Cookie");
   const token = cookie?.match(/(?:^|;\s*)session=([^;]+)/)?.[1];

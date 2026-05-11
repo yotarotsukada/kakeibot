@@ -200,8 +200,7 @@ export class GoogleSheetsStorage implements Storage {
       const data = (await res.json()) as { values?: string[][] };
       const rows = data.values ?? [];
       const rowIdx = rows.findIndex((row) => row[0] === walletName);
-      if (rowIdx === -1)
-        throw new Error(`財布が見つかりません: ${walletName}`);
+      if (rowIdx === -1) throw new Error(`財布が見つかりません: ${walletName}`);
 
       const cellRange = `${SHEET_NAMES.WALLET_MASTER}!C${rowIdx + 1}`;
       const updateUrl = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(cellRange)}?valueInputOption=USER_ENTERED`;

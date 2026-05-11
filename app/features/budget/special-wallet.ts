@@ -1,6 +1,6 @@
 import type { Wallet } from "~/domain/budget/budget";
 import {
-  AppError,
+  type AppError,
   BusinessRuleError,
   ValidationError,
   wrapUnknownError,

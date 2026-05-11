@@ -25,7 +25,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   const url = new URL(request.url);
   const rawMonth = url.searchParams.get("month") ?? currentMonth;
-  const selectedMonth = isValidMonth(rawMonth, monthRange) ? rawMonth : currentMonth;
+  const selectedMonth = isValidMonth(rawMonth, monthRange)
+    ? rawMonth
+    : currentMonth;
 
   const coreData = unwrap(await getDashboardData({ storage, selectedMonth }));
   return { ...coreData, currentMonth, selectedMonth, monthRange };

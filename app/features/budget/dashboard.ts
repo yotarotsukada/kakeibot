@@ -85,7 +85,13 @@ export async function getDashboardData(deps: {
         const totalBudget = budgets.reduce((sum, b) => sum + b.amount, 0);
         const usagePercentage =
           totalBudget > 0 ? Math.round((totalUsed / totalBudget) * 100) : 0;
-        return { walletName: w.name, totalBudget, totalUsed, usagePercentage, latestDate };
+        return {
+          walletName: w.name,
+          totalBudget,
+          totalUsed,
+          usagePercentage,
+          latestDate,
+        };
       }),
     );
 

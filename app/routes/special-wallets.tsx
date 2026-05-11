@@ -1,11 +1,7 @@
 import { Tick02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useEffect, useRef, useState } from "react";
-import {
-  useActionData,
-  useFetcher,
-  useLoaderData,
-} from "react-router";
+import { useActionData, useFetcher, useLoaderData } from "react-router";
 import { InlineBudgetField } from "~/components/features/budget/InlineBudgetField";
 import { MoneyInput } from "~/components/features/budget/MoneyInput";
 import { SPECIAL_WALLET_ACCENT_COLOR } from "~/components/features/wallet/categoryColors";
@@ -128,7 +124,9 @@ export default function SpecialWalletsPage() {
       <div className="flex items-start justify-between px-1">
         <div className="space-y-0.5">
           <h1 className="text-lg font-bold text-foreground">財布</h1>
-          <p className="text-xs text-muted-foreground">臨時の出費を管理します</p>
+          <p className="text-xs text-muted-foreground">
+            臨時の出費を管理します
+          </p>
         </div>
         <Button
           type="button"
@@ -255,7 +253,7 @@ function SpecialWalletCard({ item }: { item: WalletItem }) {
                   strokeWidth={2.5}
                   className="opacity-70"
                 />
-                精算完了
+                精算を完了
               </span>
             )}
           </div>
@@ -282,7 +280,7 @@ function SpecialWalletCard({ item }: { item: WalletItem }) {
                   : "text-foreground/75 border-foreground/20 bg-foreground/[0.04] hover:bg-foreground/[0.08]",
             )}
           >
-            {isSettling ? "処理中…" : isSettled ? "未精算に戻す" : "精算完了"}
+            {isSettling ? "処理中…" : isSettled ? "未精算に戻す" : "精算を完了"}
           </button>
         </div>
 
@@ -373,10 +371,14 @@ function NewWalletForm({ onSuccess }: { onSuccess: () => void }) {
       <createFetcher.Form method="post" className="space-y-2.5">
         <input type="hidden" name="intent" value="create-wallet" />
         <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground block">
+          <label
+            htmlFor="nwf-name"
+            className="text-xs font-medium text-muted-foreground block"
+          >
             財布名
           </label>
           <Input
+            id="nwf-name"
             name="walletName"
             placeholder="旅行や大きな買い物"
             className="h-9 text-sm rounded-2xl"
@@ -384,11 +386,15 @@ function NewWalletForm({ onSuccess }: { onSuccess: () => void }) {
           />
         </div>
         <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground block">
+          <label
+            htmlFor="nwf-budget"
+            className="text-xs font-medium text-muted-foreground block"
+          >
             予算
           </label>
           <div className="flex items-center justify-between">
             <MoneyInput
+              id="nwf-budget"
               name="budgetAmount"
               wrapperClassName="w-36"
               className="h-9 text-sm rounded-2xl"

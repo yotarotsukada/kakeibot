@@ -28,10 +28,7 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
           type="number"
           min={0}
           {...inputProps}
-          className={cn(
-            "pl-5 text-right tabular-nums font-numeric",
-            className,
-          )}
+          className={cn("pl-5 text-right tabular-nums font-numeric", className)}
         />
       </div>
     );
