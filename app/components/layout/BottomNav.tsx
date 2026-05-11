@@ -45,7 +45,7 @@ export function BottomNav() {
               size={22}
               strokeWidth={isActive ? 2 : 1.5}
             />
-            <span>特別財布</span>
+            <span>財布</span>
           </>
         )}
       </NavLink>
