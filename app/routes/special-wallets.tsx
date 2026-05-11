@@ -367,31 +367,37 @@ function NewWalletForm({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <Card className="rounded-3xl px-5 py-5 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.15)]">
-      <p className="text-xs font-semibold text-foreground/70 mb-3">
-        新しい財布を登録
-      </p>
-      <createFetcher.Form method="post" className="space-y-2">
+      <createFetcher.Form method="post" className="space-y-3">
         <input type="hidden" name="intent" value="create-wallet" />
-        <Input
-          name="walletName"
-          placeholder="例: 沖縄旅行、新居家具"
-          className="h-9 text-sm rounded-2xl"
-          required
-        />
-        <div className="flex gap-2">
-          <MoneyInput
-            name="budgetAmount"
-            placeholder="予算（任意）"
-            wrapperClassName="flex-1"
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground block">
+            財布名
+          </label>
+          <Input
+            name="walletName"
+            placeholder="例: 沖縄旅行、新居家具"
             className="h-9 text-sm rounded-2xl"
+            required
           />
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className="h-9 px-4 text-sm rounded-2xl shrink-0"
-          >
-            {isSubmitting ? "登録中…" : "登録"}
-          </Button>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground block">
+            予算
+          </label>
+          <div className="flex gap-2">
+            <MoneyInput
+              name="budgetAmount"
+              wrapperClassName="flex-1"
+              className="h-9 text-sm rounded-2xl"
+            />
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="h-9 px-4 text-sm rounded-2xl shrink-0"
+            >
+              {isSubmitting ? "登録中…" : "登録"}
+            </Button>
+          </div>
         </div>
       </createFetcher.Form>
     </Card>
