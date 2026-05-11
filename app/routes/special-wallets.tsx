@@ -6,6 +6,8 @@ import {
   useFetcher,
   useLoaderData,
 } from "react-router";
+import { InlineBudgetField } from "~/components/features/budget/InlineBudgetField";
+import { MoneyInput } from "~/components/features/budget/MoneyInput";
 import { SPECIAL_WALLET_ACCENT_COLOR } from "~/components/features/wallet/categoryColors";
 import { PageLayout } from "~/components/layout/PageLayout";
 import { Button } from "~/components/ui/button";
@@ -215,7 +217,6 @@ function SpecialWalletCard({ item }: { item: WalletItem }) {
   const isSettling =
     settleFetcher.state !== "idle" &&
     settleFetcher.formData?.get("intent") === "toggle-settled";
-  const isSavingBudget = budgetFetcher.state !== "idle";
 
   const remaining = totalBudget - totalUsed;
   const isOver = remaining < 0;
@@ -326,32 +327,21 @@ function SpecialWalletCard({ item }: { item: WalletItem }) {
         </div>
       </div>
 
-      {/* 予算編集 */}
+      {/* 予算編集（月次予算の編集行と同じ dirty-aware パターンで統一） */}
       <Separator className="opacity-40" />
       <div className="px-6 py-3">
-        <budgetFetcher.Form method="post" className="flex items-center gap-2">
+        <budgetFetcher.Form
+          method="post"
+          className="flex items-center justify-between gap-2"
+        >
           <input type="hidden" name="intent" value="upsert-budget" />
           <input type="hidden" name="walletName" value={wallet.name} />
-          <p className="text-[10px] text-muted-foreground/60 flex-1 shrink-0">
-            予算を変更
-          </p>
-          <Input
+          <p className="text-[11px] text-muted-foreground/70">予算</p>
+          <InlineBudgetField
             name="amount"
-            type="number"
-            defaultValue={totalBudget || ""}
-            min={0}
+            initialValue={totalBudget > 0 ? totalBudget : undefined}
             placeholder="0"
-            className="h-7 w-28 text-xs text-right rounded-lg px-2 tabular-nums"
           />
-          <Button
-            type="submit"
-            variant="ghost"
-            size="sm"
-            disabled={isSavingBudget}
-            className="h-7 px-3 text-[11px] text-primary shrink-0"
-          >
-            {isSavingBudget ? "保存中…" : "保存"}
-          </Button>
         </budgetFetcher.Form>
       </div>
     </Card>
@@ -389,12 +379,11 @@ function NewWalletForm({ onSuccess }: { onSuccess: () => void }) {
           required
         />
         <div className="flex gap-2">
-          <Input
+          <MoneyInput
             name="budgetAmount"
-            type="number"
             placeholder="予算（任意）"
-            min={0}
-            className="flex-1 h-9 text-sm rounded-2xl tabular-nums"
+            wrapperClassName="flex-1"
+            className="h-9 text-sm rounded-2xl"
           />
           <Button
             type="submit"
