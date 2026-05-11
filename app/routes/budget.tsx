@@ -20,34 +20,12 @@ import {
   useActionErrorToast,
 } from "~/lib/action-result";
 import { requireAuth } from "~/lib/auth";
+import { buildMonthRange, getCurrentMonthJST, isValidMonth } from "~/lib/date";
+import { cn } from "~/lib/utils";
 import type { Route } from "./+types/budget";
 
 export function meta(_args: Route.MetaArgs) {
   return [{ title: "予算" }];
-}
-
-function getCurrentMonthJST(): string {
-  const now = new Date();
-  now.setUTCHours(now.getUTCHours() + 9);
-  const y = now.getUTCFullYear();
-  const m = String(now.getUTCMonth() + 1).padStart(2, "0");
-  return `${y}-${m}`;
-}
-
-function getMonthRange(currentMonth: string): string[] {
-  const [year, month] = currentMonth.split("-").map(Number);
-  const months: string[] = [];
-  for (let offset = -12; offset <= 1; offset++) {
-    const d = new Date(year, month - 1 + offset, 1);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    months.push(`${y}-${m}`);
-  }
-  return months;
-}
-
-function isValidMonth(month: string, range: string[]): boolean {
-  return /^\d{4}-\d{2}$/.test(month) && range.includes(month);
 }
 
 export async function loader({ request, context }: Route.LoaderArgs) {
@@ -56,7 +34,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const storage = createStorage(env);
 
   const currentMonth = getCurrentMonthJST();
-  const monthRange = getMonthRange(currentMonth);
+  // 予算は翌月分を事前設定できるよう、月範囲を1ヶ月先まで許可
+  const monthRange = buildMonthRange(currentMonth, 1);
   const url = new URL(request.url);
   const rawMonth = url.searchParams.get("month") ?? currentMonth;
   const selectedMonth = isValidMonth(rawMonth, monthRange)
@@ -167,11 +146,7 @@ export default function BudgetPage() {
           </div>
         )}
         <div
-          className={
-            budgetRecords.length > 0
-              ? "border-t border-dashed border-border/70"
-              : ""
-          }
+          className={cn(budgetRecords.length > 0 && "border-t border-dashed border-border/70")}
         >
           <AddCategoryForm
             walletName={walletName}

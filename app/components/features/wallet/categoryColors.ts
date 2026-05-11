@@ -21,3 +21,6 @@ export function getCategoryColor(index: number): string {
 
 /** 予算超過時の警告色（やわらかいレッド、不必要に煽らない） */
 export const OVER_BUDGET_COLOR = "oklch(0.66 0.15 25)";
+
+/** 特別財布（旅行・家具など月をまたぐ目標予算）のアクセントカラー */
+export const SPECIAL_WALLET_ACCENT_COLOR = CATEGORY_COLORS[2];

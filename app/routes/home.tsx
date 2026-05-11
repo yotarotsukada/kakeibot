@@ -1,4 +1,5 @@
 import { useLoaderData } from "react-router";
+import { SPECIAL_WALLET_ACCENT_COLOR } from "~/components/features/wallet/categoryColors";
 import { MonthSelector } from "~/components/features/wallet/MonthSelector";
 import { WalletCard } from "~/components/features/wallet/WalletCard";
 import { PageLayout } from "~/components/layout/PageLayout";
@@ -7,30 +8,11 @@ import { unwrap } from "~/domain/result";
 import { getDashboardData } from "~/features/budget/dashboard";
 import { createStorage } from "~/infra/factory";
 import { requireAuth } from "~/lib/auth";
+import { buildMonthRange, getCurrentMonthJST, isValidMonth } from "~/lib/date";
 import type { Route } from "./+types/home";
 
 export function meta(_args: Route.MetaArgs) {
   return [{ title: "家計" }];
-}
-
-function getCurrentMonthJST(): string {
-  const now = new Date();
-  now.setUTCHours(now.getUTCHours() + 9);
-  const y = now.getUTCFullYear();
-  const m = String(now.getUTCMonth() + 1).padStart(2, "0");
-  return `${y}-${m}`;
-}
-
-function buildMonthRange(currentMonth: string): string[] {
-  const [year, month] = currentMonth.split("-").map(Number);
-  const months: string[] = [];
-  for (let offset = -12; offset <= 0; offset++) {
-    const d = new Date(year, month - 1 + offset, 1);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    months.push(`${y}-${m}`);
-  }
-  return months;
 }
 
 export async function loader({ request, context }: Route.LoaderArgs) {
@@ -43,7 +25,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   const url = new URL(request.url);
   const rawMonth = url.searchParams.get("month") ?? currentMonth;
-  const selectedMonth = monthRange.includes(rawMonth) ? rawMonth : currentMonth;
+  const selectedMonth = isValidMonth(rawMonth, monthRange) ? rawMonth : currentMonth;
 
   const coreData = unwrap(await getDashboardData({ storage, selectedMonth }));
   return { ...coreData, currentMonth, selectedMonth, monthRange };
@@ -119,7 +101,7 @@ export default function Home() {
             totalBudget={recentWalletSummary.totalBudget}
             totalUsed={recentWalletSummary.totalUsed}
             usagePercentage={recentWalletSummary.usagePercentage}
-            accentColor="oklch(0.74 0.10 295)"
+            accentColor={SPECIAL_WALLET_ACCENT_COLOR}
             monthly={false}
           />
         </section>

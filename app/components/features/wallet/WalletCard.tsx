@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import { Card } from "~/components/ui/card";
 import type { CategoryUsage } from "~/features/budget/dashboard";
+import { cn } from "~/lib/utils";
 import { CategoryBudgetRow } from "./CategoryBudgetRow";
 import { getCategoryColor, OVER_BUDGET_COLOR } from "./categoryColors";
 
@@ -65,9 +66,10 @@ export function WalletCard({
               : "残り"}
         </p>
         <p
-          className={`font-numeric text-[2.5rem] font-extrabold leading-none tracking-tight tabular-nums ${
-            isOver ? "text-destructive" : "text-foreground"
-          }`}
+          className={cn(
+            "font-numeric text-[2.5rem] font-extrabold leading-none tracking-tight tabular-nums",
+            isOver ? "text-destructive" : "text-foreground",
+          )}
         >
           <span className="text-2xl font-bold mr-0.5 align-baseline opacity-70">
             ¥

@@ -5,6 +5,7 @@ import { Form } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import type { BudgetRecord } from "~/domain/budget/budget";
+import { cn } from "~/lib/utils";
 
 type CategoryEditRowProps = {
   record: BudgetRecord;
@@ -62,9 +63,10 @@ export function CategoryEditRow({
             onChange={(e) => setAmount(e.target.value)}
             min={0}
             aria-label="予算額"
-            className={`w-24 pl-5 text-right tabular-nums font-numeric font-medium transition-colors ${
-              isDirty ? "ring-2 ring-primary/30 border-primary/40" : ""
-            }`}
+            className={cn(
+              "w-24 pl-5 text-right tabular-nums font-numeric font-medium transition-colors",
+              isDirty && "ring-2 ring-primary/30 border-primary/40",
+            )}
           />
         </div>
         {isDirty && !isInvalid && (
