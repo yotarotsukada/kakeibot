@@ -2,12 +2,9 @@
  * インメモリモックストレージ（開発用）。
  */
 
-import {
-  type BudgetRecord,
-  type Wallet,
-} from "~/domain/budget/budget";
+import type { BudgetRecord, Wallet } from "~/domain/budget/budget";
 import type { LedgerEntry } from "~/domain/ledger/entry";
-import type { Storage } from "~/domain/storage";
+import type { LedgerEntryWithId, Storage } from "~/domain/storage";
 import { SHEET_NAMES } from "~/domain/storage";
 
 type StoredEntry = LedgerEntry & { transactionId: string };
@@ -294,6 +291,27 @@ export class MockStorage implements Storage {
 
   async getLedgerEntriesByWallet(walletName: string): Promise<LedgerEntry[]> {
     return this.ledger.filter((e) => e.wallet === walletName);
+  }
+
+  async getLedgerEntriesForCalendar(
+    walletName: string,
+  ): Promise<LedgerEntryWithId[]> {
+    return this.ledger
+      .filter((e) => e.wallet === walletName)
+      .map(({ transactionId, ...entry }) => ({ id: transactionId, ...entry }));
+  }
+
+  async updateLedgerEntryCategory(
+    entryId: string,
+    categoryName: string,
+  ): Promise<void> {
+    const entry = this.ledger.find((e) => e.transactionId === entryId);
+    if (entry) {
+      entry.category = categoryName;
+      console.log(
+        `[MockStorage] ✏️  カテゴリ更新: ${entryId} → ${categoryName}`,
+      );
+    }
   }
 
   async getLatestLedgerEntry(): Promise<{

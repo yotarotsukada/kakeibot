@@ -104,12 +104,7 @@ export async function action({
         }),
       );
     }
-    const result = await upsertBudget(
-      walletName,
-      "一括",
-      amount,
-      { storage },
-    );
+    const result = await upsertBudget(walletName, "一括", amount, { storage });
     if (!result.ok) return actionError(result.error);
     return null;
   }
@@ -241,7 +236,11 @@ function WalletNameEditor({
     const trimmed = draft.trim();
     if (trimmed && trimmed !== name) {
       renameFetcher.submit(
-        { intent: "rename-wallet", oldWalletName: name, newWalletName: trimmed },
+        {
+          intent: "rename-wallet",
+          oldWalletName: name,
+          newWalletName: trimmed,
+        },
         { method: "post" },
       );
     }
@@ -267,7 +266,10 @@ function WalletNameEditor({
         onChange={(e) => setDraft(e.target.value)}
         onBlur={submit}
         onKeyDown={(e) => {
-          if (e.key === "Enter") { e.preventDefault(); submit(); }
+          if (e.key === "Enter") {
+            e.preventDefault();
+            submit();
+          }
           if (e.key === "Escape") cancel();
         }}
         className="text-xs font-medium text-foreground/70 bg-transparent border-b border-foreground/30 outline-none min-w-0 w-full max-w-[160px]"
@@ -280,7 +282,10 @@ function WalletNameEditor({
     <button
       type="button"
       disabled={disabled || isPending}
-      onClick={() => { setDraft(name); setEditing(true); }}
+      onClick={() => {
+        setDraft(name);
+        setEditing(true);
+      }}
       className={cn(
         "text-xs font-medium text-foreground/70 truncate text-left hover:text-foreground/90 transition-colors",
         "border-b border-transparent hover:border-foreground/20",

@@ -15,6 +15,8 @@ export const SHEET_NAMES = {
 
 export type SheetName = (typeof SHEET_NAMES)[keyof typeof SHEET_NAMES];
 
+export type LedgerEntryWithId = LedgerEntry & { id: string };
+
 export interface Storage {
   initialize(): Promise<void>;
   appendLedgerEntries(entries: LedgerEntry[]): Promise<void>;
@@ -29,4 +31,9 @@ export interface Storage {
   setWalletSettled(walletName: string, settled: boolean): Promise<void>;
   getLedgerEntriesByWallet(walletName: string): Promise<LedgerEntry[]>;
   getLatestLedgerEntry(): Promise<{ walletName: string; date: string } | null>;
+  getLedgerEntriesForCalendar(walletName: string): Promise<LedgerEntryWithId[]>;
+  updateLedgerEntryCategory(
+    entryId: string,
+    categoryName: string,
+  ): Promise<void>;
 }
