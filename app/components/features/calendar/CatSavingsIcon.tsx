@@ -9,11 +9,15 @@ type Props = {
 // ---- Shared body ---------------------------------------------------------
 //
 // Head : wide flat ellipse (cx=12 cy=14 rx=10.5 ry=7.5)
-// Ears : obtuse triangle (tip angle ≈102°); base-points sit on the ellipse edge.
-//   Left  — M 5.5 8.2 L 8.5 5 L 11 6.5
-//   Right — M 13 6.5 L 15.5 5 L 18.5 8.2
-//   strokeLinejoin="round" (on the parent svg) gives the slight natural rounding.
-// Whiskers: extended to x=1 / x=23 so they clearly poke out past the face.
+// Ears : obtuse-ish triangles (tip angle ≈89° — just under a right angle,
+//        giving "slightly sharp" feel). Base points sit on the ellipse edge.
+//          Left  — M 4.5 8.8 L 7 4.5 L 10.5 6.6
+//          Right — M 13.5 6.6 L 17 4.5 L 19.5 8.8
+//        The tip leans slightly outward (x=7/17 vs base-center x=7.5/16.5),
+//        which adds that kawaii forward-tilt. strokeLinejoin="round" on the
+//        parent gives the faint, natural corner rounding requested.
+// Whiskers: start at the cheek sides (x=7/17) and fan out to the viewBox
+//           edge (x=0/24) — clearly poking past the face silhouette.
 
 function CatBase() {
   return (
@@ -21,9 +25,9 @@ function CatBase() {
       {/* 横つぶれ楕円の頭 */}
       <ellipse cx="12" cy="14" rx="10.5" ry="7.5" />
 
-      {/* 鈍角三角形の耳（頂角≈102°、strokeLinejoin=round で頂点ほんのり丸め） */}
-      <path d="M 5.5 8.2 L 8.5 5 L 11 6.5" />
-      <path d="M 13 6.5 L 15.5 5 L 18.5 8.2" />
+      {/* 耳: 頂角≈89°の鋭さ控えめ三角形、外側寄り配置 */}
+      <path d="M 4.5 8.8 L 7 4.5 L 10.5 6.6" />
+      <path d="M 13.5 6.6 L 17 4.5 L 19.5 8.8" />
 
       {/* 鼻：小さな塗りつぶし楕円 */}
       <ellipse cx="12" cy="14.5" rx="1.5" ry="1" fill="currentColor" stroke="none" />
@@ -31,9 +35,9 @@ function CatBase() {
       {/* 口：ω 形（W字カーブ = 猫の口） */}
       <path d="M 9.5 17 Q 11 19.5 12 17.5 Q 13 19.5 14.5 17" />
 
-      {/* ひげ：顔の外まで伸ばして猫らしさを強調 */}
-      <path d="M 8 14.2 L 1 13 M 8 16 L 1 17" strokeWidth={0.9} />
-      <path d="M 16 14.2 L 23 13 M 16 16 L 23 17" strokeWidth={0.9} />
+      {/* ひげ：viewBox端まで扇形に広げ、顔の外へはっきり飛び出す */}
+      <path d="M 7 14.2 L 0 12.8 M 7 15.8 L 0 17.2" strokeWidth={0.9} />
+      <path d="M 17 14.2 L 24 12.8 M 17 15.8 L 24 17.2" strokeWidth={0.9} />
     </>
   );
 }
