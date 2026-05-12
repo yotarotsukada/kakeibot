@@ -51,14 +51,12 @@ function EyesFlat() {
   return <path d="M 6.5 12 L 10 12 M 14 12 L 17.5 12" />;
 }
 
-// 2. (^ ω ^)  アーチ目 + ほっぺ ─ うれしそう
+// 2. (^ ω ^)  アーチ目 ─ うれしそう
 function EyesArch() {
   return (
     <>
       <path d="M 6.5 12.5 Q 8.5 10.5 10.5 12.5" />
       <path d="M 13.5 12.5 Q 15.5 10.5 17.5 12.5" />
-      <circle cx="6.2"  cy="16.8" r="1.3" fill="currentColor" stroke="none" opacity={0.28} />
-      <circle cx="17.8" cy="16.8" r="1.3" fill="currentColor" stroke="none" opacity={0.28} />
     </>
   );
 }
@@ -73,17 +71,12 @@ function EyesAngle() {
   );
 }
 
-// 4. (• ω •)  まるまる目 + たっぷりほっぺ ─ ふくふく感 MAX
+// 4. (• ω •)  まるまる目 ─ ふくふく感 MAX
 function EyesDot() {
   return (
     <>
       <circle cx="9"  cy="12" r="1.6" fill="currentColor" stroke="none" />
       <circle cx="15" cy="12" r="1.6" fill="currentColor" stroke="none" />
-      {/* ほっぺ（2重の薄いドット） */}
-      <circle cx="6.2"  cy="16.5" r="1.3" fill="currentColor" stroke="none" opacity={0.28} />
-      <circle cx="7.5"  cy="17.6" r="0.9" fill="currentColor" stroke="none" opacity={0.18} />
-      <circle cx="17.8" cy="16.5" r="1.3" fill="currentColor" stroke="none" opacity={0.28} />
-      <circle cx="16.5" cy="17.6" r="0.9" fill="currentColor" stroke="none" opacity={0.18} />
     </>
   );
 }
