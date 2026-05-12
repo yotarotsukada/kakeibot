@@ -25,9 +25,11 @@ function CatBase() {
       {/* 横つぶれ楕円の頭 */}
       <ellipse cx="12" cy="14" rx="10.5" ry="7.5" />
 
-      {/* 耳: 頂角≈89°の鋭さ控えめ三角形、外側寄り配置 */}
-      <path d="M 4.5 8.8 L 7 4.5 L 10.5 6.6" />
-      <path d="M 13.5 6.6 L 17 4.5 L 19.5 8.8" />
+      {/* 耳: 大胆な外側配置 + 高さアップ
+           Left  base (3,10)→(9,6.8)  tip (5,2)  — outer base x=3, just 1.5u from face edge
+           Right base (15,6.8)→(21,10) tip (19,2) — mirror */}
+      <path d="M 3 10 L 5 2 L 9 6.8" />
+      <path d="M 15 6.8 L 19 2 L 21 10" />
 
       {/* 鼻：小さな塗りつぶし楕円 */}
       <ellipse cx="12" cy="14.5" rx="1.5" ry="1" fill="currentColor" stroke="none" />
