@@ -90,6 +90,8 @@ export function MonthCalendar({
           const total = dailyTotals[cell.dateStr];
           const isSelected = cell.dateStr === selectedDate;
           const isToday = cell.dateStr === todayStr;
+          const isPast = cell.dateStr < todayStr;
+          const isSavingDay = isPast && total === undefined;
           const isSun = cell.colIdx === 0;
           const isSat = cell.colIdx === 6;
 
@@ -129,6 +131,13 @@ export function MonthCalendar({
               {total !== undefined && (
                 <span className="text-[9px] font-bold font-numeric tabular-nums leading-none text-primary/75">
                   {formatCellAmount(total)}
+                </span>
+              )}
+
+              {/* 節約おめでとう猫アイコン（前日以前で出費なし） */}
+              {isSavingDay && (
+                <span className="text-[13px] leading-none" aria-label="節約おめでとう">
+                  🐱
                 </span>
               )}
             </button>
