@@ -1,7 +1,6 @@
 import type { BudgetRecord } from "~/domain/budget/budget";
 import {
   type AppError,
-  BusinessRuleError,
   ValidationError,
   wrapUnknownError,
 } from "~/domain/errors";
@@ -13,11 +12,9 @@ export type BudgetManageDeps = { storage: Storage };
 export type BudgetPageData = {
   walletName: string;
   budgetRecords: BudgetRecord[];
-  categories: string[];
-  usedCategories: string[];
   totalBudget: number;
-  totalUsed: number;
-  totalUsagePercentage: number;
+  prevMonthBudgetExists: boolean;
+  usedCategories: string[];
 };
 
 /**
@@ -32,41 +29,41 @@ export async function getBudgetPageData(
 ): Promise<Result<BudgetPageData, AppError>> {
   try {
     const walletName = `${month}通常`;
-    const [budgetRecords, categories, ledgerEntries] = await Promise.all([
+    const prevMonthWalletName = `${getPrevMonth(month)}通常`;
+
+    const [budgetRecords, prevMonthRecords, ledgerEntries] = await Promise.all([
       deps.storage.getBudgetRecords(walletName),
-      deps.storage.getCategories(),
+      deps.storage.getBudgetRecords(prevMonthWalletName),
       deps.storage.getLedgerEntriesByWallet(walletName),
     ]);
 
-    const spendingByCategory: Record<string, number> = {};
-    for (const e of ledgerEntries) {
-      if (e.type === "支出") {
-        spendingByCategory[e.category] =
-          (spendingByCategory[e.category] ?? 0) + e.amount;
-      }
-    }
-
-    const usedCategories = Object.keys(spendingByCategory);
+    budgetRecords.sort((a, b) => a.categoryName.localeCompare(b.categoryName, "ja"));
     const totalBudget = budgetRecords.reduce((sum, r) => sum + r.amount, 0);
-    const totalUsed = Object.values(spendingByCategory).reduce(
-      (sum, v) => sum + v,
-      0,
-    );
-    const totalUsagePercentage =
-      totalBudget > 0 ? Math.round((totalUsed / totalBudget) * 100) : 0;
+    const prevMonthBudgetExists = prevMonthRecords.length > 0;
+    const usedCategories = [
+      ...new Set(
+        ledgerEntries
+          .filter((e) => e.type === "支出")
+          .map((e) => e.category),
+      ),
+    ];
 
     return ok({
       walletName,
       budgetRecords,
-      categories,
-      usedCategories,
       totalBudget,
-      totalUsed,
-      totalUsagePercentage,
+      prevMonthBudgetExists,
+      usedCategories,
     });
   } catch (e) {
     return err(wrapUnknownError(e));
   }
+}
+
+function getPrevMonth(month: string): string {
+  const [year, m] = month.split("-").map(Number);
+  const d = new Date(year, m - 2, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
 /**
@@ -110,28 +107,32 @@ export async function upsertBudget(
   }
 }
 
-/**
- * 予算カテゴリの削除。
- *
- * ビジネスルール: 明細が紐づいているカテゴリは削除できない（ユーザー回復可能 → BusinessRuleError）。
- */
 export async function deleteBudget(
   walletName: string,
   categoryName: string,
   deps: BudgetManageDeps,
 ): Promise<Result<void, AppError>> {
   try {
-    const entries = await deps.storage.getLedgerEntriesByWallet(walletName);
-    if (entries.some((e) => e.category === categoryName && e.type === "支出")) {
-      return err(
-        new BusinessRuleError({
-          message: `cannot delete budget with ledger entries: ${walletName}/${categoryName}`,
-          userMessage: "明細が紐づいている予算項目は削除できません。",
-          code: "BUDGET_HAS_LEDGER_ENTRIES",
-        }),
-      );
-    }
     await deps.storage.deleteBudgetRecord(walletName, categoryName);
+    return ok(undefined);
+  } catch (e) {
+    return err(wrapUnknownError(e));
+  }
+}
+
+export async function copyBudgetFromPrevMonth(
+  walletName: string,
+  month: string,
+  deps: BudgetManageDeps,
+): Promise<Result<void, AppError>> {
+  try {
+    const prevMonthWalletName = `${getPrevMonth(month)}通常`;
+    const prevRecords = await deps.storage.getBudgetRecords(prevMonthWalletName);
+    await Promise.all(
+      prevRecords.map((r) =>
+        deps.storage.upsertBudgetRecord({ ...r, walletName }),
+      ),
+    );
     return ok(undefined);
   } catch (e) {
     return err(wrapUnknownError(e));

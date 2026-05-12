@@ -1,14 +1,16 @@
-import { redirect, useActionData, useLoaderData } from "react-router";
+import { Form, redirect, useActionData, useLoaderData, useNavigation } from "react-router";
 import { AddCategoryForm } from "~/components/features/budget/AddCategoryForm";
 import { BudgetOverviewCard } from "~/components/features/budget/BudgetOverviewCard";
 import { CategoryEditRow } from "~/components/features/budget/CategoryEditRow";
 import { getCategoryColor } from "~/components/features/wallet/categoryColors";
 import { MonthSelector } from "~/components/features/wallet/MonthSelector";
 import { PageLayout } from "~/components/layout/PageLayout";
+import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { ValidationError } from "~/domain/errors";
 import { unwrap } from "~/domain/result";
 import {
+  copyBudgetFromPrevMonth,
   deleteBudget,
   getBudgetPageData,
   upsertBudget,
@@ -76,6 +78,12 @@ export async function action({
     return redirect(`/budget?month=${month}`);
   }
 
+  if (intent === "copyLastMonth") {
+    const result = await copyBudgetFromPrevMonth(walletName, month, { storage });
+    if (!result.ok) return actionError(result.error);
+    return redirect(`/budget?month=${month}`);
+  }
+
   return actionError(
     new ValidationError({
       message: `unknown intent: ${intent}`,
@@ -88,10 +96,9 @@ export default function BudgetPage() {
   const {
     walletName,
     budgetRecords,
-    usedCategories,
     totalBudget,
-    totalUsed,
-    totalUsagePercentage,
+    prevMonthBudgetExists,
+    usedCategories,
     selectedMonth,
     monthRange,
   } = useLoaderData<typeof loader>();
@@ -99,6 +106,11 @@ export default function BudgetPage() {
   // action が失敗したときのみ ActionError が来る。redirect 成功時は undefined。
   const actionData = useActionData<typeof action>() as ActionError | undefined;
   useActionErrorToast(actionData);
+
+  const navigation = useNavigation();
+  const isCopyPending =
+    navigation.state !== "idle" &&
+    navigation.formData?.get("intent") === "copyLastMonth";
 
   const currentIdx = monthRange.indexOf(selectedMonth);
   const prevMonth = currentIdx > 0 ? monthRange[currentIdx - 1] : null;
@@ -115,11 +127,8 @@ export default function BudgetPage() {
       />
 
       <BudgetOverviewCard
-        walletName={walletName}
         budgetRecords={budgetRecords}
         totalBudget={totalBudget}
-        totalUsed={totalUsed}
-        totalUsagePercentage={totalUsagePercentage}
       />
 
       {/*
@@ -128,9 +137,34 @@ export default function BudgetPage() {
       */}
       <Card className="rounded-3xl py-1 px-5 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.15)]">
         {budgetRecords.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
-            まだカテゴリがありません。下から追加してください。
-          </p>
+          <div className="py-6 flex flex-col items-center gap-3">
+            <p className="text-center text-sm text-muted-foreground">
+              未設定です。下から追加してください。
+            </p>
+            {prevMonthBudgetExists && (
+              <Form method="post">
+                <input type="hidden" name="intent" value="copyLastMonth" />
+                <input type="hidden" name="walletName" value={walletName} />
+                <input type="hidden" name="month" value={selectedMonth} />
+                <Button
+                  type="submit"
+                  variant="outline"
+                  size="sm"
+                  disabled={isCopyPending}
+                  className="rounded-full text-xs"
+                >
+                  {isCopyPending ? (
+                    <>
+                      <span className="size-3 rounded-full border-2 border-foreground/20 border-t-foreground/60 animate-spin" />
+                      コピー中…
+                    </>
+                  ) : (
+                    "前月からコピー"
+                  )}
+                </Button>
+              </Form>
+            )}
+          </div>
         ) : (
           <div className="divide-y divide-border/50">
             {budgetRecords.map((record, i) => (

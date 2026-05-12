@@ -13,14 +13,6 @@ type CategoryEditRowProps = {
   isUsed: boolean;
 };
 
-/**
- * カテゴリ別予算の編集行。
- *
- * UX 設計:
- *   - InlineBudgetField で「値が変わった時だけ保存ボタンが現れる」を統一実装
- *     - 保存ボタン領域は常時確保しレイアウトシフトを防ぐ
- *   - 削除は常時表示の小さな ✕ ボタン（明細紐付き時は無効化）
- */
 export function CategoryEditRow({
   record,
   walletName,
