@@ -6,97 +6,93 @@ type Props = {
   size?: number;
 };
 
-// ---- Shared parts --------------------------------------------------------
-// Head: chubby circle (cx=12 cy=13 r=9). Ear base points lie exactly on it.
-// Left ear base: (5.5, 6.8) and (9.5, 4.3) — both ~r=9 from center.
-// Right ear base: mirror at (14.5, 4.3) and (18.5, 6.8).
+// ---- Shared body ---------------------------------------------------------
+//
+// Head: wide flat ellipse (cx=12 cy=14 rx=10.5 ry=7.5)
+//   → よこつぶれた輪郭
+// Ears: cubic-bezier arches — 鈍角のゆるい丸み耳
+//   Left : M 6 7.8 C 5 1 11 1 10 6.6
+//   Right: M 14 6.6 C 13 1 19 1 18 7.8
+//   Both base-points lie ≈ on the ellipse edge.
 
 function CatBase() {
   return (
     <>
-      {/* Chubby round head */}
-      <circle cx="12" cy="13" r="9" />
-      {/* Ears */}
-      <path d="M 5.5 6.8 L 4 1.5 L 9.5 4.3" />
-      <path d="M 14.5 4.3 L 20 1.5 L 18.5 6.8" />
-      {/* Nose: small filled oval */}
-      <ellipse
-        cx="12"
-        cy="14.5"
-        rx="1.3"
-        ry="0.9"
-        fill="currentColor"
-        stroke="none"
-      />
-      {/* Mouth: ω-shape (W = cat lip) */}
-      <path d="M 9.5 16.5 Q 11 19 12 17 Q 13 19 14.5 16.5" />
-      {/* Whiskers — thinner strokes */}
-      <path
-        d="M 7.5 14.2 L 2.5 13.2 M 7.5 15.8 L 2.5 16.8"
-        strokeWidth={0.9}
-      />
-      <path
-        d="M 16.5 14.2 L 21.5 13.2 M 16.5 15.8 L 21.5 16.8"
-        strokeWidth={0.9}
-      />
+      {/* 横つぶれ楕円の頭 */}
+      <ellipse cx="12" cy="14" rx="10.5" ry="7.5" />
+
+      {/* 鈍角・丸み耳（cubic bezier で滑らかなアーチ） */}
+      <path d="M 6 7.8 C 5 1 11 1 10 6.6" />
+      <path d="M 14 6.6 C 13 1 19 1 18 7.8" />
+
+      {/* 鼻：小さな塗りつぶし楕円 */}
+      <ellipse cx="12" cy="14.5" rx="1.5" ry="1" fill="currentColor" stroke="none" />
+
+      {/* 口：ω 形（W字カーブ = 猫の口） */}
+      <path d="M 9.5 17 Q 11 19.5 12 17.5 Q 13 19.5 14.5 17" />
+
+      {/* ひげ：細い線 */}
+      <path d="M 7.5 14.5 L 2.5 13.5 M 7.5 16 L 2.5 17" strokeWidth={0.9} />
+      <path d="M 16.5 14.5 L 21.5 13.5 M 16.5 16 L 21.5 17" strokeWidth={0.9} />
     </>
   );
 }
 
-// ---- Face variants (eyes only) -------------------------------------------
+// ---- 5種の目 (目だけ差し替え) -------------------------------------------
 
-// 1. (= ω =)  横線目 — 最もシンプルな顔文字にゃんこ
+// 1. (= ω =)  横線目 ─ いちばんシンプルな顔文字にゃんこ
 function EyesFlat() {
-  return <path d="M 7 12 L 10.5 12 M 13.5 12 L 17 12" />;
+  return <path d="M 6.5 12 L 10 12 M 14 12 L 17.5 12" />;
 }
 
-// 2. (^ ω ^)  アーチ目 + ほっぺ — うれしそう
+// 2. (^ ω ^)  アーチ目 + ほっぺ ─ うれしそう
 function EyesArch() {
   return (
     <>
-      <path d="M 7.5 13 Q 9 10.5 10.5 13" />
-      <path d="M 13.5 13 Q 15 10.5 16.5 13" />
-      <circle cx="7" cy="16" r="1.1" fill="currentColor" stroke="none" opacity={0.35} />
-      <circle cx="17" cy="16" r="1.1" fill="currentColor" stroke="none" opacity={0.35} />
+      <path d="M 6.5 13 Q 8.5 10.5 10.5 13" />
+      <path d="M 13.5 13 Q 15.5 10.5 17.5 13" />
+      <circle cx="6.2"  cy="16.8" r="1.3" fill="currentColor" stroke="none" opacity={0.28} />
+      <circle cx="17.8" cy="16.8" r="1.3" fill="currentColor" stroke="none" opacity={0.28} />
     </>
   );
 }
 
-// 3. (> ω <)  とんがり目 — テンション高め
+// 3. (> ω <)  とんがり目 ─ テンション高め・元気いっぱい
 function EyesAngle() {
   return (
     <>
-      <path d="M 7 11.5 L 10 12.5 L 7 13.5" />
-      <path d="M 17 11.5 L 14 12.5 L 17 13.5" />
+      <path d="M 6.5 11.5 L 10 12.5 L 6.5 13.5" />
+      <path d="M 17.5 11.5 L 14 12.5 L 17.5 13.5" />
     </>
   );
 }
 
-// 4. (• ω •)  まるまる目 + たっぷりほっぺ — ふくふく感MAX
+// 4. (• ω •)  まるまる目 + たっぷりほっぺ ─ ふくふく感 MAX
 function EyesDot() {
   return (
     <>
-      <circle cx="9" cy="12" r="1.5" fill="currentColor" stroke="none" />
-      <circle cx="15" cy="12" r="1.5" fill="currentColor" stroke="none" />
-      <circle cx="7"   cy="16.5" r="1.1" fill="currentColor" stroke="none" opacity={0.35} />
-      <circle cx="8.3" cy="17.5" r="0.8" fill="currentColor" stroke="none" opacity={0.25} />
-      <circle cx="17"  cy="16.5" r="1.1" fill="currentColor" stroke="none" opacity={0.35} />
-      <circle cx="15.7" cy="17.5" r="0.8" fill="currentColor" stroke="none" opacity={0.25} />
+      <circle cx="9"  cy="12" r="1.6" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="12" r="1.6" fill="currentColor" stroke="none" />
+      {/* ほっぺ（2重の薄いドット） */}
+      <circle cx="6.2"  cy="16.5" r="1.3" fill="currentColor" stroke="none" opacity={0.28} />
+      <circle cx="7.5"  cy="17.6" r="0.9" fill="currentColor" stroke="none" opacity={0.18} />
+      <circle cx="17.8" cy="16.5" r="1.3" fill="currentColor" stroke="none" opacity={0.28} />
+      <circle cx="16.5" cy="17.6" r="0.9" fill="currentColor" stroke="none" opacity={0.18} />
     </>
   );
 }
 
-// 5. (≧ ω ≦)  大アーチ目 — 感激・大喜び
+// 5. (≧ω≦)  大アーチ目 ─ 感激・大喜び
 function EyesBigArch() {
   return (
     <>
-      <path d="M 7 14 Q 9 8.5 11 14" />
-      <path d="M 13 14 Q 15 8.5 17 14" />
+      <path d="M 6.5 14 Q 8.5 8.5 10.5 14" />
+      <path d="M 13.5 14 Q 15.5 8.5 17.5 14" />
     </>
   );
 }
 
-// ---- Main component -------------------------------------------------------
+// ---- Main ----------------------------------------------------------------
 
 const EYES = {
   1: EyesFlat,
