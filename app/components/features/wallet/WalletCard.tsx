@@ -133,12 +133,7 @@ export function WalletCard({
                   color={getCategoryColor(i)}
                 />
               ))}
-              {miscUsed != null && (
-                <MiscRow
-                  usedAmount={miscUsed}
-                  color={getCategoryColor(categoryUsages.length)}
-                />
-              )}
+              {miscUsed != null && <MiscRow usedAmount={miscUsed} />}
             </div>
           )}
         </div>
@@ -148,12 +143,11 @@ export function WalletCard({
 }
 
 /** 予算カテゴリに紐付けられない支出をまとめる「未分類」行。 */
-function MiscRow({ usedAmount, color }: { usedAmount: number; color: string }) {
+function MiscRow({ usedAmount }: { usedAmount: number }) {
   return (
     <div className="flex items-baseline gap-2">
       <span
-        className="size-2 rounded-full shrink-0 translate-y-[-1px]"
-        style={{ backgroundColor: color }}
+        className="size-2 rounded-full shrink-0 translate-y-[-1px] bg-foreground/25"
         aria-hidden
       />
       <span className="text-sm text-foreground font-medium flex-1">
