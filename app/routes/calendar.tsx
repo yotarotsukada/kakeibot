@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useFetcher, useLoaderData } from "react-router";
 import { MonthCalendar } from "~/components/features/calendar/MonthCalendar";
+import { getCategoryColor } from "~/components/features/wallet/categoryColors";
 import { MonthSelector } from "~/components/features/wallet/MonthSelector";
 import { PageLayout } from "~/components/layout/PageLayout";
 import {
@@ -80,13 +81,17 @@ export async function action({
 // ---- カテゴリ選択行 --------------------------------------------------------
 
 const UNCATEGORIZED = "未分類";
+// 予算カテゴリにないエントリのドット色（ニュートラルグレー）
+const UNCATEGORIZED_COLOR = "oklch(0.72 0 0)";
 
 function EntryRow({
   entry,
   categories,
+  colorMap,
 }: {
   entry: LedgerEntryWithId;
   categories: string[];
+  colorMap: Map<string, string>;
 }) {
   const fetcher = useFetcher<typeof action>();
   const actionData = fetcher.data as ActionError | null | undefined;
@@ -101,37 +106,49 @@ function EntryRow({
     resolvedCategory;
   const isPending = fetcher.state !== "idle";
 
+  const dotColor = colorMap.get(optimisticCategory) ?? UNCATEGORIZED_COLOR;
+
   // 選択肢: 予算カテゴリ + 「未分類」（常時表示）
   const options = [...categories, UNCATEGORIZED];
 
   return (
-    <div className="flex items-center gap-3 py-3 border-b border-border/40 last:border-0">
-      <div className="flex-1 min-w-0">
+    <div className="bg-background rounded-2xl px-4 py-3 flex items-start gap-3 border border-border/30 shadow-[0_1px_4px_-2px_oklch(0.30_0.02_30_/_0.08)]">
+      {/* カテゴリドット＋セレクト＋メモ */}
+      <div className="flex-1 min-w-0 space-y-1.5">
+        <div className="flex items-center gap-2">
+          <span
+            className="size-2 rounded-full shrink-0 mt-px"
+            style={{ backgroundColor: dotColor }}
+            aria-hidden
+          />
+          <select
+            key={optimisticCategory}
+            defaultValue={optimisticCategory}
+            disabled={isPending}
+            onChange={(e) => {
+              fetcher.submit(
+                { entryId: entry.id, categoryName: e.target.value },
+                { method: "post", action: "/calendar" },
+              );
+            }}
+            className="text-[13px] font-medium rounded-lg border border-border/40 bg-transparent px-2 py-0.5 text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
+          >
+            {options.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+        </div>
         {entry.memo && (
-          <p className="text-xs text-muted-foreground/70 truncate mb-1">
+          <p className="text-[11px] text-muted-foreground/65 truncate pl-4">
             {entry.memo}
           </p>
         )}
-        <select
-          key={optimisticCategory}
-          defaultValue={optimisticCategory}
-          disabled={isPending}
-          onChange={(e) => {
-            fetcher.submit(
-              { entryId: entry.id, categoryName: e.target.value },
-              { method: "post", action: "/calendar" },
-            );
-          }}
-          className="text-xs rounded-lg border border-border/60 bg-background px-2 py-1 text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 disabled:opacity-50 cursor-pointer"
-        >
-          {options.map((cat) => (
-            <option key={cat} value={cat}>
-              {cat}
-            </option>
-          ))}
-        </select>
       </div>
-      <span className="font-numeric tabular-nums font-semibold text-sm shrink-0">
+
+      {/* 金額 */}
+      <span className="font-numeric tabular-nums font-bold text-base text-foreground/90 shrink-0 pt-0.5">
         ¥{entry.amount.toLocaleString()}
       </span>
     </div>
@@ -158,6 +175,12 @@ function DayDetailPanel({
     return () => cancelAnimationFrame(id);
   }, []);
 
+  // カテゴリ名 → カラー の Map（順序でパレットを割り当て）
+  const colorMap = useMemo(
+    () => new Map(categories.map((cat, i) => [cat, getCategoryColor(i)])),
+    [categories],
+  );
+
   const [, m, d] = date.split("-");
   const label = `${Number(m)}月${Number(d)}日`;
   const total = entries
@@ -173,41 +196,49 @@ function DayDetailPanel({
         transform: visible ? "translateY(0)" : "translateY(110%)",
       }}
     >
-      <div className="max-w-md mx-auto rounded-t-3xl bg-background border-t border-x border-border/60 shadow-[0_-6px_32px_-6px_oklch(0.30_0.02_30_/_0.18)] overflow-hidden">
+      <div className="max-w-md mx-auto rounded-t-3xl bg-card border-t border-x border-border/50 shadow-[0_-8px_40px_-4px_oklch(0.30_0.02_30_/_0.20)] overflow-hidden">
         {/* ドラッグハンドル */}
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 rounded-full bg-border" />
+        <div className="flex justify-center pt-3 pb-2">
+          <div className="w-10 h-1 rounded-full bg-border/80" />
         </div>
 
         {/* ヘッダー */}
-        <div className="flex items-center justify-between px-5 py-2 border-b border-border/50">
+        <div className="flex items-start justify-between px-5 pb-3">
           <div>
-            <p className="font-semibold text-base">{label}</p>
+            <p className="font-bold text-lg leading-tight">{label}</p>
             {total > 0 && (
-              <p className="text-xs text-muted-foreground font-numeric tabular-nums">
-                支出合計 ¥{total.toLocaleString()}
-              </p>
+              <div className="flex items-baseline gap-1 mt-0.5">
+                <span className="text-[11px] text-muted-foreground">支出</span>
+                <span className="font-numeric tabular-nums font-bold text-base text-primary">
+                  ¥{total.toLocaleString()}
+                </span>
+              </div>
             )}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-muted-foreground/60 hover:text-foreground transition-colors p-1 -mr-1"
+            className="text-muted-foreground/50 hover:text-foreground transition-colors p-1 -mr-1 mt-0.5"
             aria-label="閉じる"
           >
             ✕
           </button>
         </div>
 
-        {/* エントリ一覧 */}
-        <div className="px-5 overflow-y-auto max-h-[45vh] pb-4">
+        {/* エントリ一覧（muted 背景 + カード形式） */}
+        <div className="bg-muted/30 border-t border-border/40 px-3 py-3 overflow-y-auto max-h-[45vh] space-y-2">
           {entries.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">
+            <p className="text-sm text-muted-foreground text-center py-5">
               この日の記録はありません
             </p>
           ) : (
             entries.map((entry) => (
-              <EntryRow key={entry.id} entry={entry} categories={categories} />
+              <EntryRow
+                key={entry.id}
+                entry={entry}
+                categories={categories}
+                colorMap={colorMap}
+              />
             ))
           )}
         </div>
