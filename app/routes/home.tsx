@@ -41,6 +41,7 @@ export default function Home() {
     totalUsed,
     totalUsagePercentage,
     categoryUsages,
+    miscUsed,
     recentWalletSummaries,
     selectedMonth,
     monthRange,
@@ -81,6 +82,7 @@ export default function Home() {
             totalUsed={totalUsed}
             usagePercentage={totalUsagePercentage}
             categoryUsages={categoryUsages}
+            miscUsed={miscUsed}
           />
         )}
       </section>

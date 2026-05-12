@@ -11,6 +11,8 @@ type WalletCardProps = {
   totalUsed: number;
   usagePercentage: number;
   categoryUsages?: CategoryUsage[];
+  /** 予算カテゴリに紐付けられない支出の合計。あるときだけ渡す。 */
+  miscUsed?: number | null;
   /** 特別財布などで色味を変えたいとき */
   accentColor?: string;
   /**
@@ -36,6 +38,7 @@ export function WalletCard({
   totalUsed,
   usagePercentage,
   categoryUsages,
+  miscUsed,
   accentColor,
   monthly = true,
 }: WalletCardProps) {
@@ -130,11 +133,35 @@ export function WalletCard({
                   color={getCategoryColor(i)}
                 />
               ))}
+              {miscUsed != null && <MiscRow usedAmount={miscUsed} />}
             </div>
           )}
         </div>
       )}
     </Card>
+  );
+}
+
+/** 予算カテゴリに紐付けられない支出をまとめる「その他」行。 */
+function MiscRow({ usedAmount }: { usedAmount: number }) {
+  return (
+    <div className="space-y-1.5 pt-1 border-t border-border/40">
+      <div className="flex items-baseline gap-2">
+        <span
+          className="size-2 rounded-full shrink-0 translate-y-[-1px] bg-foreground/20"
+          aria-hidden
+        />
+        <span className="text-sm text-foreground/60 font-medium flex-1">
+          その他
+        </span>
+        <span className="text-sm font-bold tabular-nums text-foreground/60">
+          <span className="font-sans text-[10px] font-medium opacity-70 mr-0.5">
+            計
+          </span>
+          <span className="font-numeric">¥{usedAmount.toLocaleString()}</span>
+        </span>
+      </div>
+    </div>
   );
 }
 

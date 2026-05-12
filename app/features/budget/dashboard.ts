@@ -26,6 +26,8 @@ export type DashboardCoreData = {
   categoryUsages: CategoryUsage[];
   /** 未精算の特別財布サマリ（最新活動順、最大3件）。 */
   recentWalletSummaries: WalletSummary[];
+  /** 予算カテゴリに紐付けられない支出の合計。該当なしのときは null。 */
+  miscUsed: number | null;
 };
 
 export async function getDashboardData(deps: {
@@ -63,6 +65,12 @@ export async function getDashboardData(deps: {
     const totalUsed = categoryUsages.reduce((sum, c) => sum + c.usedAmount, 0);
     const totalUsagePercentage =
       totalBudget > 0 ? Math.round((totalUsed / totalBudget) * 100) : 0;
+
+    const budgetCategoryNames = new Set(normalBudgets.map((b) => b.categoryName));
+    const miscUsedAmount = normalEntries
+      .filter((e) => e.type === "支出" && !budgetCategoryNames.has(e.category))
+      .reduce((sum, e) => sum + e.amount, 0);
+    const miscUsed = miscUsedAmount > 0 ? miscUsedAmount : null;
 
     // 未精算の特別財布を取得し、各財布の明細・予算を並列フェッチ
     const unsettledSpecialWallets = wallets.filter(
@@ -114,6 +122,7 @@ export async function getDashboardData(deps: {
       totalUsagePercentage,
       categoryUsages,
       recentWalletSummaries,
+      miscUsed,
     });
   } catch (e) {
     return err(wrapUnknownError(e));
