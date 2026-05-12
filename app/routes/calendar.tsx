@@ -79,6 +79,8 @@ export async function action({
 
 // ---- カテゴリ選択行 --------------------------------------------------------
 
+const UNCATEGORIZED = "未分類";
+
 function EntryRow({
   entry,
   categories,
@@ -90,21 +92,26 @@ function EntryRow({
   const actionData = fetcher.data as ActionError | null | undefined;
   useActionErrorToast(actionData);
 
+  // 予算カテゴリにない場合は「未分類」として扱う
+  const resolvedCategory = categories.includes(entry.category)
+    ? entry.category
+    : UNCATEGORIZED;
   const optimisticCategory =
-    (fetcher.formData?.get("categoryName") as string | null) ?? entry.category;
+    (fetcher.formData?.get("categoryName") as string | null) ??
+    resolvedCategory;
   const isPending = fetcher.state !== "idle";
+
+  // 選択肢: 予算カテゴリ + 「未分類」（常時表示）
+  const options = [...categories, UNCATEGORIZED];
 
   return (
     <div className="flex items-center gap-3 py-3 border-b border-border/40 last:border-0">
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
-          <span className="text-xs text-muted-foreground">{entry.actor}</span>
-          {entry.memo && (
-            <span className="text-xs text-muted-foreground/70 truncate">
-              {entry.memo}
-            </span>
-          )}
-        </div>
+        {entry.memo && (
+          <p className="text-xs text-muted-foreground/70 truncate mb-1">
+            {entry.memo}
+          </p>
+        )}
         <select
           key={optimisticCategory}
           defaultValue={optimisticCategory}
@@ -117,26 +124,16 @@ function EntryRow({
           }}
           className="text-xs rounded-lg border border-border/60 bg-background px-2 py-1 text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 disabled:opacity-50 cursor-pointer"
         >
-          {categories.map((cat) => (
+          {options.map((cat) => (
             <option key={cat} value={cat}>
               {cat}
             </option>
           ))}
-          {!categories.includes(optimisticCategory) && (
-            <option value={optimisticCategory}>{optimisticCategory}</option>
-          )}
         </select>
       </div>
-      <div className="text-right shrink-0">
-        <span
-          className={[
-            "font-numeric tabular-nums font-semibold text-sm",
-            entry.type === "支出" ? "text-foreground" : "text-green-600",
-          ].join(" ")}
-        >
-          {entry.type === "支出" ? "−" : "+"}¥{entry.amount.toLocaleString()}
-        </span>
-      </div>
+      <span className="font-numeric tabular-nums font-semibold text-sm shrink-0">
+        ¥{entry.amount.toLocaleString()}
+      </span>
     </div>
   );
 }
@@ -245,11 +242,12 @@ export default function CalendarPage() {
     return map;
   }, [entries]);
 
-  // 月が変わったらパネルを閉じる（entries が再ロードされるタイミングで連動）
-  // biome-ignore lint/correctness/useExhaustiveDependencies: entries の変化で月の切り替えを検知
+  // 月ナビゲーション時のみパネルを閉じる。
+  // カテゴリ更新による entries 再ロードでは selectedMonth は変わらないためパネルは維持される。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: selectedMonth が変化したときだけ実行したい（effect 内部では参照しないが trigger として使用）
   useEffect(() => {
     setSelectedDate(null);
-  }, [entries]);
+  }, [selectedMonth]);
 
   const selectedEntries = useMemo(
     () => (selectedDate ? entries.filter((e) => e.date === selectedDate) : []),

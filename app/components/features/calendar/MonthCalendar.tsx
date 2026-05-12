@@ -3,10 +3,7 @@ import { cn } from "~/lib/utils";
 const DAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
 
 function formatCellAmount(amount: number): string {
-  if (amount >= 10000) return `¥${Math.round(amount / 1000)}k`;
-  if (amount >= 1000)
-    return `¥${(amount / 1000).toFixed(1).replace(/\.0$/, "")}k`;
-  return `¥${amount}`;
+  return `¥${amount.toLocaleString()}`;
 }
 
 function getTodayStr(): string {
