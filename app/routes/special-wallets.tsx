@@ -12,7 +12,7 @@ import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
 import { ValidationError } from "~/domain/errors";
 import { unwrap } from "~/domain/result";
-import { upsertBudget } from "~/features/budget/manage";
+import { deleteBudget, upsertBudget } from "~/features/budget/manage";
 import {
   createSpecialWallet,
   getSpecialWalletsPageData,
@@ -103,6 +103,12 @@ export async function action({
           userMessage: "金額を入力してください。",
         }),
       );
+    }
+    // 0 を保存 = 予算を未設定に戻す
+    if (amount === 0) {
+      const result = await deleteBudget(walletName, "一括", { storage });
+      if (!result.ok) return actionError(result.error);
+      return null;
     }
     const result = await upsertBudget(walletName, "一括", amount, { storage });
     if (!result.ok) return actionError(result.error);
@@ -272,7 +278,7 @@ function WalletNameEditor({
           }
           if (e.key === "Escape") cancel();
         }}
-        className="text-xs font-medium text-foreground/70 bg-transparent border-b border-foreground/30 outline-none min-w-0 w-full max-w-[160px]"
+        className="text-sm font-semibold text-foreground bg-transparent border-b border-foreground/30 outline-none min-w-0 w-full max-w-[180px]"
         maxLength={40}
       />
     );
@@ -287,8 +293,7 @@ function WalletNameEditor({
         setEditing(true);
       }}
       className={cn(
-        "text-xs font-medium text-foreground/70 truncate text-left hover:text-foreground/90 transition-colors",
-        "border-b border-transparent hover:border-foreground/20",
+        "text-sm font-semibold text-foreground truncate text-left hover:opacity-70 transition-opacity",
         (disabled || isPending) && "pointer-events-none opacity-60",
       )}
     >
@@ -306,13 +311,14 @@ function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
   useActionErrorToast(settleFetcher.data as ActionError | undefined);
   useActionErrorToast(budgetFetcher.data as ActionError | undefined);
 
+  const hasBudget = totalBudget > 0;
   const isSettled = wallet.settled;
   const isSettling =
     settleFetcher.state !== "idle" &&
     settleFetcher.formData?.get("intent") === "toggle-settled";
 
   const remaining = totalBudget - totalUsed;
-  const isOver = remaining < 0;
+  const isOver = hasBudget && remaining < 0;
 
   const barColor = isSettled
     ? "oklch(0.72 0.02 265)"
@@ -326,8 +332,8 @@ function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
         "rounded-3xl gap-0 py-0 ring-1 shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.15)]",
         "transition-all duration-500",
         isSettled
-          ? "opacity-60 ring-foreground/[0.04]"
-          : "opacity-100 ring-foreground/[0.06]",
+          ? "bg-muted/40 ring-foreground/[0.04]"
+          : "ring-foreground/[0.06]",
       )}
     >
       <div className="px-6 pt-5 pb-5">
@@ -343,7 +349,7 @@ function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
                   strokeWidth={2.5}
                   className="opacity-70"
                 />
-                精算を完了
+                精算済み
               </span>
             )}
           </div>
@@ -374,48 +380,58 @@ function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
           </button>
         </div>
 
-        {/* 残り金額 */}
-        <p className="text-[11px] text-muted-foreground/80 mb-1">
-          {isOver ? "オーバー" : "残り"}
-        </p>
-        <p
-          className={cn(
-            "font-numeric text-[2.5rem] font-extrabold leading-none tracking-tight tabular-nums",
-            isOver ? "text-destructive" : "text-foreground",
-          )}
-        >
-          <span className="text-2xl font-bold mr-0.5 align-baseline opacity-70">
-            ¥
-          </span>
-          {Math.abs(remaining).toLocaleString()}
-        </p>
-
-        {/* プログレスバー */}
-        <div className="mt-4 h-1.5 bg-foreground/8 rounded-full overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all duration-500 ease-out"
-            style={{
-              width: `${Math.min(usagePercentage, 100)}%`,
-              backgroundColor: barColor,
-            }}
-          />
-        </div>
-
-        {/* 使用 / 予算 */}
-        <div className="mt-2.5 flex justify-between">
-          <div>
-            <p className="font-numeric text-xs tabular-nums text-muted-foreground">
-              ¥{totalUsed.toLocaleString()}
+        {/* 予算未設定: コンパクト表示。設定時は残り/オーバー + バー + 使用/予算 */}
+        {hasBudget ? (
+          <>
+            <p className="text-[11px] text-muted-foreground/80 mb-1">
+              {isOver ? "オーバー" : "残り"}
             </p>
-            <p className="text-[10px] text-muted-foreground/60 mt-0.5">使用</p>
-          </div>
-          <div className="text-right">
-            <p className="font-numeric text-xs tabular-nums text-muted-foreground">
-              ¥{totalBudget.toLocaleString()}
+            <p
+              className={cn(
+                "font-numeric text-[2.5rem] font-extrabold leading-none tracking-tight tabular-nums",
+                isOver ? "text-destructive" : "text-foreground",
+              )}
+            >
+              <span className="text-2xl font-bold mr-0.5 align-baseline opacity-70">
+                ¥
+              </span>
+              {Math.abs(remaining).toLocaleString()}
             </p>
-            <p className="text-[10px] text-muted-foreground/60 mt-0.5">予算</p>
-          </div>
-        </div>
+
+            <div className="mt-4 h-1.5 bg-foreground/8 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-500 ease-out"
+                style={{
+                  width: `${Math.min(usagePercentage, 100)}%`,
+                  backgroundColor: barColor,
+                }}
+              />
+            </div>
+
+            <div className="mt-2.5 flex justify-between">
+              <div>
+                <p className="font-numeric text-xs tabular-nums text-muted-foreground">
+                  ¥{totalUsed.toLocaleString()}
+                </p>
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">使用</p>
+              </div>
+              <div className="text-right">
+                <p className="font-numeric text-xs tabular-nums text-muted-foreground">
+                  ¥{totalBudget.toLocaleString()}
+                </p>
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">予算</p>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-[11px] text-muted-foreground/80 mb-1">予算未設定</p>
+            <p className="font-numeric text-[2.5rem] font-extrabold leading-none tracking-tight tabular-nums text-foreground">
+              <span className="text-2xl font-bold mr-0.5 align-baseline opacity-70">¥</span>
+              {totalUsed.toLocaleString()}
+            </p>
+          </>
+        )}
       </div>
 
       {/* 予算編集（月次予算の編集行と同じ dirty-aware パターンで統一） */}
@@ -429,10 +445,12 @@ function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
           <input type="hidden" name="walletName" value={wallet.name} />
           <p className="text-[11px] text-muted-foreground/70">予算</p>
           <InlineBudgetField
+            key={totalBudget}
             name="amount"
             initialValue={totalBudget > 0 ? totalBudget : undefined}
             placeholder="0"
             isPending={budgetFetcher.state !== "idle"}
+            disabled={isSettled}
           />
         </budgetFetcher.Form>
       </div>
