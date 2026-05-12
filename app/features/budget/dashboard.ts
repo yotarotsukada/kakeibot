@@ -66,7 +66,9 @@ export async function getDashboardData(deps: {
     const totalUsagePercentage =
       totalBudget > 0 ? Math.round((totalUsed / totalBudget) * 100) : 0;
 
-    const budgetCategoryNames = new Set(normalBudgets.map((b) => b.categoryName));
+    const budgetCategoryNames = new Set(
+      normalBudgets.map((b) => b.categoryName),
+    );
     const miscUsedAmount = normalEntries
       .filter((e) => e.type === "支出" && !budgetCategoryNames.has(e.category))
       .reduce((sum, e) => sum + e.amount, 0);

@@ -7,7 +7,7 @@ import { importPKCS8, SignJWT } from "jose";
 import type { BudgetRecord, Wallet } from "~/domain/budget/budget";
 import { GoogleSheetsError } from "~/domain/errors";
 import type { LedgerEntry } from "~/domain/ledger/entry";
-import type { Storage } from "~/domain/storage";
+import type { LedgerEntryWithId, Storage } from "~/domain/storage";
 import { SHEET_NAMES } from "~/domain/storage";
 
 const SHEETS_BASE = "https://sheets.googleapis.com/v4/spreadsheets";
@@ -163,8 +163,7 @@ export class GoogleSheetsStorage implements Storage {
       const readRes = await fetch(readUrl, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!readRes.ok)
-        throw new Error(`Sheets read failed: ${readRes.status}`);
+      if (!readRes.ok) throw new Error(`Sheets read failed: ${readRes.status}`);
       const data = (await readRes.json()) as { values?: string[][] };
       const rows = data.values ?? [];
       const rowIdx = rows.findIndex(
@@ -423,32 +422,8 @@ export class GoogleSheetsStorage implements Storage {
   }
 
   async getLedgerEntriesByWallet(walletName: string): Promise<LedgerEntry[]> {
-    try {
-      const token = await this.getAccessToken();
-      const range = `${SHEET_NAMES.LEDGER}!A:I`;
-      const url = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(range)}`;
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return [];
-      const data = (await res.json()) as { values?: string[][] };
-      if (!data.values) return [];
-      return data.values
-        .slice(1)
-        .filter((row) => row[6] === walletName)
-        .map((row) => ({
-          date: row[1],
-          type: row[2] as "入金" | "支出",
-          amount: Number(row[3]) || 0,
-          actor: row[4],
-          category: row[5],
-          wallet: row[6],
-          shouldSettle: row[7] === "TRUE",
-          memo: row[8] ?? "",
-        }));
-    } catch (err) {
-      throw new GoogleSheetsError("元帳の取得に失敗しました", err);
-    }
+    const entries = await this.getLedgerEntriesForCalendar(walletName);
+    return entries.map(({ id: _id, ...entry }) => entry);
   }
 
   async getLatestLedgerEntry(): Promise<{
@@ -473,6 +448,80 @@ export class GoogleSheetsStorage implements Storage {
       return { walletName: latest[5], date: latest[0] };
     } catch (err) {
       throw new GoogleSheetsError("最新明細の取得に失敗しました", err);
+    }
+  }
+
+  async getLedgerEntriesForCalendar(
+    walletName: string,
+  ): Promise<LedgerEntryWithId[]> {
+    try {
+      const token = await this.getAccessToken();
+      const range = `${SHEET_NAMES.LEDGER}!A:I`;
+      const url = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(range)}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return [];
+      const data = (await res.json()) as { values?: string[][] };
+      if (!data.values) return [];
+      return data.values
+        .slice(1)
+        .filter((row) => row[6] === walletName)
+        .map((row) => ({
+          id: row[0],
+          date: row[1],
+          type: row[2] as "入金" | "支出",
+          amount: Number(row[3]) || 0,
+          actor: row[4],
+          category: row[5],
+          wallet: row[6],
+          shouldSettle: row[7] === "TRUE",
+          memo: row[8] ?? "",
+        }));
+    } catch (err) {
+      throw new GoogleSheetsError("元帳の取得に失敗しました", err);
+    }
+  }
+
+  async updateLedgerEntryCategory(
+    entryId: string,
+    categoryName: string,
+  ): Promise<void> {
+    try {
+      const token = await this.getAccessToken();
+      const idsRange = `${SHEET_NAMES.LEDGER}!A:A`;
+      const url = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(idsRange)}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`Sheets read failed: ${res.status}`);
+      const data = (await res.json()) as { values?: string[][] };
+      const rows = data.values ?? [];
+      const rowIdx = rows.findIndex((row) => row[0] === entryId);
+      if (rowIdx === -1)
+        throw new Error(`元帳エントリが見つかりません: ${entryId}`);
+
+      const cellRange = `${SHEET_NAMES.LEDGER}!F${rowIdx + 1}`;
+      const updateUrl = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(cellRange)}?valueInputOption=USER_ENTERED`;
+      const updateRes = await fetch(updateUrl, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          range: cellRange,
+          majorDimension: "ROWS",
+          values: [[categoryName]],
+        }),
+      });
+      if (!updateRes.ok)
+        throw new Error(
+          `Sheets update failed: ${updateRes.status} ${await updateRes.text()}`,
+        );
+    } catch (err) {
+      if (err instanceof GoogleSheetsError) throw err;
+      throw new GoogleSheetsError("カテゴリの更新に失敗しました", err);
     }
   }
 
