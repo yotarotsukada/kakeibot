@@ -37,18 +37,6 @@ export function BudgetOverviewCard({
   return (
     <Card className="rounded-3xl gap-0 py-0 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.15)]">
       <div className="px-6 py-5 flex items-center gap-5">
-        <div className="flex-1 min-w-0">
-          <p className="text-[11px] text-muted-foreground/80 mb-1">
-            予算
-          </p>
-          <p className="font-numeric text-[2rem] font-extrabold leading-none tracking-tight tabular-nums">
-            <span className="text-xl font-bold mr-0.5 align-baseline opacity-70">
-              ¥
-            </span>
-            {totalBudget.toLocaleString()}
-          </p>
-        </div>
-
         {/* ドーナツチャート（margin=0 で切れ防止） */}
         <div
           className="relative shrink-0"
@@ -84,6 +72,18 @@ export function BudgetOverviewCard({
               ))}
             </Pie>
           </PieChart>
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <p className="text-[11px] text-muted-foreground/80 mb-1">
+            予算総額
+          </p>
+          <p className="font-numeric text-[2rem] font-extrabold leading-none tracking-tight tabular-nums">
+            <span className="text-xl font-bold mr-0.5 align-baseline opacity-70">
+              ¥
+            </span>
+            {totalBudget.toLocaleString()}
+          </p>
         </div>
       </div>
     </Card>

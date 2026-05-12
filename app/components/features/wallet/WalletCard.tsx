@@ -52,7 +52,7 @@ export function WalletCard({
     <Card className="rounded-3xl gap-0 py-0 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.15)]">
       {/* Hero: 残り金額 */}
       <div className="px-6 pt-5 pb-6">
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center justify-between mb-3">
           <p className="text-[11px] text-muted-foreground/80">
             {isOver ? "オーバー" : "残り"}
           </p>

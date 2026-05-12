@@ -37,6 +37,7 @@ export async function getBudgetPageData(
       deps.storage.getLedgerEntriesByWallet(walletName),
     ]);
 
+    budgetRecords.sort((a, b) => a.categoryName.localeCompare(b.categoryName, "ja"));
     const totalBudget = budgetRecords.reduce((sum, r) => sum + r.amount, 0);
     const prevMonthBudgetExists = prevMonthRecords.length > 0;
     const usedCategories = [

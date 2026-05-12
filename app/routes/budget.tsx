@@ -139,7 +139,7 @@ export default function BudgetPage() {
         {budgetRecords.length === 0 ? (
           <div className="py-6 flex flex-col items-center gap-3">
             <p className="text-center text-sm text-muted-foreground">
-              まだカテゴリがありません。下から追加してください。
+              未設定です。下から追加してください。
             </p>
             {prevMonthBudgetExists && (
               <Form method="post">
