@@ -152,12 +152,71 @@ export class GoogleSheetsStorage implements Storage {
   }
 
   async deleteBudgetRecord(
-    _walletName: string,
-    _categoryName: string,
+    walletName: string,
+    categoryName: string,
   ): Promise<void> {
-    throw new GoogleSheetsError(
-      "deleteBudgetRecord は未実装です（スプレッドシートを直接編集してください）",
-    );
+    try {
+      const token = await this.getAccessToken();
+
+      const range = `${SHEET_NAMES.BUDGET}!A:C`;
+      const readUrl = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(range)}`;
+      const readRes = await fetch(readUrl, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!readRes.ok)
+        throw new Error(`Sheets read failed: ${readRes.status}`);
+      const data = (await readRes.json()) as { values?: string[][] };
+      const rows = data.values ?? [];
+      const rowIdx = rows.findIndex(
+        (row) => row[0] === walletName && row[1] === categoryName,
+      );
+      if (rowIdx === -1) return;
+
+      const metaUrl = `${SHEETS_BASE}/${this.spreadsheetId}?fields=sheets.properties`;
+      const metaRes = await fetch(metaUrl, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!metaRes.ok)
+        throw new Error(`Sheets metadata failed: ${metaRes.status}`);
+      const meta = (await metaRes.json()) as {
+        sheets: { properties: { sheetId: number; title: string } }[];
+      };
+      const sheet = meta.sheets.find(
+        (s) => s.properties.title === SHEET_NAMES.BUDGET,
+      );
+      if (!sheet)
+        throw new Error(`シート "${SHEET_NAMES.BUDGET}" が見つかりません`);
+
+      const batchUrl = `${SHEETS_BASE}/${this.spreadsheetId}:batchUpdate`;
+      const batchRes = await fetch(batchUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requests: [
+            {
+              deleteDimension: {
+                range: {
+                  sheetId: sheet.properties.sheetId,
+                  dimension: "ROWS",
+                  startIndex: rowIdx,
+                  endIndex: rowIdx + 1,
+                },
+              },
+            },
+          ],
+        }),
+      });
+      if (!batchRes.ok)
+        throw new Error(
+          `Sheets delete failed: ${batchRes.status} ${await batchRes.text()}`,
+        );
+    } catch (err) {
+      if (err instanceof GoogleSheetsError) throw err;
+      throw new GoogleSheetsError("予算記録の削除に失敗しました", err);
+    }
   }
 
   async getWallets(): Promise<Wallet[]> {

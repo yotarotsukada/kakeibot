@@ -1,5 +1,6 @@
 import { PlusSignIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { useEffect, useRef } from "react";
 import { Form, useNavigation } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -23,10 +24,24 @@ export function AddCategoryForm({
   selectedMonth,
 }: AddCategoryFormProps) {
   const navigation = useNavigation();
-  const isPending = navigation.state === "submitting";
+  const isPending =
+    navigation.state !== "idle" &&
+    navigation.formData?.get("intent") === "upsert";
+
+  const formRef = useRef<HTMLFormElement>(null);
+  // 成功時は action が redirect するため state が "loading" を経由する。
+  // エラー時は redirect なしで即 "idle" に戻るのでリセットしない。
+  const wentThroughLoading = useRef(false);
+  useEffect(() => {
+    if (navigation.state === "loading") wentThroughLoading.current = true;
+    if (navigation.state === "idle" && wentThroughLoading.current) {
+      wentThroughLoading.current = false;
+      formRef.current?.reset();
+    }
+  }, [navigation.state]);
 
   return (
-    <Form method="post" className="flex items-center gap-3 py-3">
+    <Form ref={formRef} method="post" className="flex items-center gap-3 py-3">
       <span
         className="size-2.5 rounded-full shrink-0 ring-1 ring-dashed ring-muted-foreground/30 ring-offset-0"
         aria-hidden
