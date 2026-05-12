@@ -38,18 +38,6 @@ export function BottomNav() {
           </>
         )}
       </NavLink>
-      <NavLink to="/budget" className={navLinkClass}>
-        {({ isActive }) => (
-          <>
-            <HugeiconsIcon
-              icon={PiggyBankIcon}
-              size={22}
-              strokeWidth={isActive ? 2 : 1.5}
-            />
-            <span>予算</span>
-          </>
-        )}
-      </NavLink>
       <NavLink to="/calendar" className={navLinkClass}>
         {({ isActive }) => (
           <>
@@ -59,6 +47,18 @@ export function BottomNav() {
               strokeWidth={isActive ? 2 : 1.5}
             />
             <span>カレンダー</span>
+          </>
+        )}
+      </NavLink>
+      <NavLink to="/budget" className={navLinkClass}>
+        {({ isActive }) => (
+          <>
+            <HugeiconsIcon
+              icon={PiggyBankIcon}
+              size={22}
+              strokeWidth={isActive ? 2 : 1.5}
+            />
+            <span>予算</span>
           </>
         )}
       </NavLink>

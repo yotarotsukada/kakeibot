@@ -131,7 +131,7 @@ function EntryRow({
                 { method: "post", action: "/calendar" },
               );
             }}
-            className="text-[13px] font-medium rounded-lg border border-border/40 bg-transparent px-2 py-0.5 text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
+            className="text-[13px] font-medium rounded-lg border border-border/40 bg-card px-2 py-0.5 text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
           >
             {options.map((cat) => (
               <option key={cat} value={cat}>
