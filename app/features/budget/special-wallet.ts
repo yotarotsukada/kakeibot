@@ -110,6 +110,14 @@ export async function toggleWalletSettled(
   settled: boolean,
   deps: { storage: Storage },
 ): Promise<Result<void, AppError>> {
+  if (!walletName.trim()) {
+    return err(
+      new ValidationError({
+        message: "walletName is empty",
+        userMessage: "財布名を入力してください。",
+      }),
+    );
+  }
   try {
     await deps.storage.setWalletSettled(walletName, settled);
     return ok(undefined);

@@ -35,7 +35,8 @@ export function InlineBudgetField({
   const [amount, setAmount] = useState<string>(initialStr);
 
   const isDirty = amount !== initialStr && amount.trim() !== "";
-  const isInvalid = amount !== "" && Number(amount) < 0;
+  const isInvalid =
+    amount !== "" && (Number.isNaN(Number(amount)) || Number(amount) < 0);
   const showSubmit = isDirty && !isInvalid;
 
   return (

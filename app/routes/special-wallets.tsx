@@ -17,6 +17,7 @@ import { upsertBudget } from "~/features/budget/manage";
 import {
   createSpecialWallet,
   getSpecialWalletsPageData,
+  type SpecialWalletSummary,
   toggleWalletSettled,
 } from "~/features/budget/special-wallet";
 import { createStorage } from "~/infra/factory";
@@ -85,7 +86,16 @@ export async function action({
 
   if (intent === "upsert-budget") {
     const walletName = String(formData.get("walletName") ?? "");
-    const amount = Number(formData.get("amount"));
+    const rawAmount = String(formData.get("amount") ?? "");
+    const amount = Number(rawAmount);
+    if (!rawAmount || Number.isNaN(amount)) {
+      return actionError(
+        new ValidationError({
+          message: "amount is empty or invalid",
+          userMessage: "金額を入力してください。",
+        }),
+      );
+    }
     const result = await upsertBudget(
       walletName,
       SPECIAL_WALLET_CATEGORY,
@@ -201,14 +211,7 @@ function FilterTabs({
   );
 }
 
-type WalletItem = {
-  wallet: { name: string; type: "月次" | "特別"; settled: boolean };
-  totalBudget: number;
-  totalUsed: number;
-  usagePercentage: number;
-};
-
-function SpecialWalletCard({ item }: { item: WalletItem }) {
+function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
   const { wallet, totalBudget, totalUsed, usagePercentage } = item;
 
   const settleFetcher = useFetcher<ActionError | null>();
