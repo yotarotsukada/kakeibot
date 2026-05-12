@@ -4,7 +4,6 @@ import { Card } from "~/components/ui/card";
 import type { BudgetRecord } from "~/domain/budget/budget";
 
 type BudgetOverviewCardProps = {
-  walletName: string;
   budgetRecords: BudgetRecord[];
   totalBudget: number;
 };
@@ -20,7 +19,6 @@ type BudgetOverviewCardProps = {
  * バグ修正: recharts デフォルト margin=5 で右下が切れていた問題を margin=0 で解消。
  */
 export function BudgetOverviewCard({
-  walletName,
   budgetRecords,
   totalBudget,
 }: BudgetOverviewCardProps) {
@@ -40,11 +38,8 @@ export function BudgetOverviewCard({
     <Card className="rounded-3xl gap-0 py-0 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.15)]">
       <div className="px-6 py-5 flex items-center gap-5">
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-foreground/70 mb-1">
-            {walletName}
-          </p>
           <p className="text-[11px] text-muted-foreground/80 mb-1">
-            今月の予算
+            予算
           </p>
           <p className="font-numeric text-[2rem] font-extrabold leading-none tracking-tight tabular-nums">
             <span className="text-xl font-bold mr-0.5 align-baseline opacity-70">

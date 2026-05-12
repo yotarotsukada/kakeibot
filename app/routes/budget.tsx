@@ -1,4 +1,4 @@
-import { Form, redirect, useActionData, useLoaderData } from "react-router";
+import { Form, redirect, useActionData, useLoaderData, useNavigation } from "react-router";
 import { AddCategoryForm } from "~/components/features/budget/AddCategoryForm";
 import { BudgetOverviewCard } from "~/components/features/budget/BudgetOverviewCard";
 import { CategoryEditRow } from "~/components/features/budget/CategoryEditRow";
@@ -107,6 +107,11 @@ export default function BudgetPage() {
   const actionData = useActionData<typeof action>() as ActionError | undefined;
   useActionErrorToast(actionData);
 
+  const navigation = useNavigation();
+  const isCopyPending =
+    navigation.state !== "idle" &&
+    navigation.formData?.get("intent") === "copyLastMonth";
+
   const currentIdx = monthRange.indexOf(selectedMonth);
   const prevMonth = currentIdx > 0 ? monthRange[currentIdx - 1] : null;
   const nextMonth =
@@ -122,7 +127,6 @@ export default function BudgetPage() {
       />
 
       <BudgetOverviewCard
-        walletName={walletName}
         budgetRecords={budgetRecords}
         totalBudget={totalBudget}
       />
@@ -142,8 +146,21 @@ export default function BudgetPage() {
                 <input type="hidden" name="intent" value="copyLastMonth" />
                 <input type="hidden" name="walletName" value={walletName} />
                 <input type="hidden" name="month" value={selectedMonth} />
-                <Button type="submit" variant="outline" size="sm" className="rounded-full text-xs">
-                  先月の予算をコピー
+                <Button
+                  type="submit"
+                  variant="outline"
+                  size="sm"
+                  disabled={isCopyPending}
+                  className="rounded-full text-xs"
+                >
+                  {isCopyPending ? (
+                    <>
+                      <span className="size-3 rounded-full border-2 border-foreground/20 border-t-foreground/60 animate-spin" />
+                      コピー中…
+                    </>
+                  ) : (
+                    "前月からコピー"
+                  )}
                 </Button>
               </Form>
             )}

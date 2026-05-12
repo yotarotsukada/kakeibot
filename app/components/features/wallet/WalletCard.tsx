@@ -52,22 +52,14 @@ export function WalletCard({
     <Card className="rounded-3xl gap-0 py-0 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.15)]">
       {/* Hero: 残り金額 */}
       <div className="px-6 pt-5 pb-6">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-medium text-foreground/70">{walletName}</p>
+        <div className="flex items-center gap-2 mb-1">
+          <p className="text-[11px] text-muted-foreground/80">
+            {isOver ? "オーバー" : "残り"}
+          </p>
           {monthly && (
             <StatusBadge isOver={isOver} percentage={usagePercentage} />
           )}
         </div>
-
-        <p className="text-[11px] text-muted-foreground/80 mb-1">
-          {isOver
-            ? monthly
-              ? "予算オーバー"
-              : "オーバー"
-            : monthly
-              ? "今月の残り"
-              : "残り"}
-        </p>
         <p
           className={cn(
             "font-numeric text-[2.5rem] font-extrabold leading-none tracking-tight tabular-nums",
