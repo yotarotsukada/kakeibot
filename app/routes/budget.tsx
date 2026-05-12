@@ -98,6 +98,7 @@ export default function BudgetPage() {
     budgetRecords,
     totalBudget,
     prevMonthBudgetExists,
+    usedCategories,
     selectedMonth,
     monthRange,
   } = useLoaderData<typeof loader>();
@@ -156,6 +157,7 @@ export default function BudgetPage() {
                 walletName={walletName}
                 selectedMonth={selectedMonth}
                 color={getCategoryColor(i)}
+                isUsed={usedCategories.includes(record.categoryName)}
               />
             ))}
           </div>

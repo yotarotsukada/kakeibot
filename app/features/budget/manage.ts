@@ -14,6 +14,7 @@ export type BudgetPageData = {
   budgetRecords: BudgetRecord[];
   totalBudget: number;
   prevMonthBudgetExists: boolean;
+  usedCategories: string[];
 };
 
 /**
@@ -30,19 +31,28 @@ export async function getBudgetPageData(
     const walletName = `${month}通常`;
     const prevMonthWalletName = `${getPrevMonth(month)}通常`;
 
-    const [budgetRecords, prevMonthRecords] = await Promise.all([
+    const [budgetRecords, prevMonthRecords, ledgerEntries] = await Promise.all([
       deps.storage.getBudgetRecords(walletName),
       deps.storage.getBudgetRecords(prevMonthWalletName),
+      deps.storage.getLedgerEntriesByWallet(walletName),
     ]);
 
     const totalBudget = budgetRecords.reduce((sum, r) => sum + r.amount, 0);
     const prevMonthBudgetExists = prevMonthRecords.length > 0;
+    const usedCategories = [
+      ...new Set(
+        ledgerEntries
+          .filter((e) => e.type === "支出")
+          .map((e) => e.category),
+      ),
+    ];
 
     return ok({
       walletName,
       budgetRecords,
       totalBudget,
       prevMonthBudgetExists,
+      usedCategories,
     });
   } catch (e) {
     return err(wrapUnknownError(e));
