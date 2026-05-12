@@ -49,9 +49,6 @@ export function WalletCard({
     ? OVER_BUDGET_COLOR
     : (accentColor ?? "var(--primary)");
 
-  // 特別財布（monthly=false）で予算未設定のとき: ヒーローを「使用」として表示
-  const showUsageHero = !monthly && !hasBudget;
-
   return (
     <Card className="rounded-3xl gap-0 py-0 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.15)]">
       <div className="px-6 pt-5 pb-6">
@@ -62,65 +59,57 @@ export function WalletCard({
           </p>
         )}
 
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-[11px] text-muted-foreground/80">
-            {showUsageHero ? "使用" : isOver ? "オーバー" : "残り"}
-          </p>
-          {monthly && (
-            <StatusBadge isOver={isOver} percentage={usagePercentage} />
-          )}
-        </div>
-        <p
-          className={cn(
-            "font-numeric text-[2.5rem] font-extrabold leading-none tracking-tight tabular-nums",
-            isOver ? "text-destructive" : "text-foreground",
-          )}
-        >
-          <span className="text-2xl font-bold mr-0.5 align-baseline opacity-70">
-            ¥
-          </span>
-          {showUsageHero
-            ? totalUsed.toLocaleString()
-            : Math.abs(remaining).toLocaleString()}
-        </p>
-
-        {/* プログレスバー: 予算未設定の特別財布では非表示 */}
-        {!showUsageHero && (
-          <div className="mt-4 h-1.5 bg-foreground/8 rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-500 ease-out"
-              style={{
-                width: `${Math.min(usagePercentage, 100)}%`,
-                backgroundColor: fillColor,
-              }}
-            />
-          </div>
-        )}
-
-        {/* 使用 / 予算（ラベル付き両端表示） */}
-        <div className={cn("flex justify-between", showUsageHero ? "mt-4" : "mt-2.5")}>
-          <div>
-            <p className="font-numeric text-xs tabular-nums text-muted-foreground">
-              ¥{totalUsed.toLocaleString()}
+        {/* 予算未設定の特別財布: コンパクト表示 */}
+        {!monthly && !hasBudget ? (
+          <p className="text-sm text-muted-foreground/50 mt-1">予算未設定</p>
+        ) : (
+          <>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[11px] text-muted-foreground/80">
+                {isOver ? "オーバー" : "残り"}
+              </p>
+              {monthly && (
+                <StatusBadge isOver={isOver} percentage={usagePercentage} />
+              )}
+            </div>
+            <p
+              className={cn(
+                "font-numeric text-[2.5rem] font-extrabold leading-none tracking-tight tabular-nums",
+                isOver ? "text-destructive" : "text-foreground",
+              )}
+            >
+              <span className="text-2xl font-bold mr-0.5 align-baseline opacity-70">
+                ¥
+              </span>
+              {Math.abs(remaining).toLocaleString()}
             </p>
-            <p className="text-[10px] text-muted-foreground/60 mt-0.5">使用</p>
-          </div>
-          <div className="text-right">
-            {showUsageHero ? (
-              <>
-                <p className="text-xs text-muted-foreground/50">未設定</p>
-                <p className="text-[10px] text-muted-foreground/60 mt-0.5">予算</p>
-              </>
-            ) : (
-              <>
+
+            <div className="mt-4 h-1.5 bg-foreground/8 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-500 ease-out"
+                style={{
+                  width: `${Math.min(usagePercentage, 100)}%`,
+                  backgroundColor: fillColor,
+                }}
+              />
+            </div>
+
+            <div className="mt-2.5 flex justify-between">
+              <div>
+                <p className="font-numeric text-xs tabular-nums text-muted-foreground">
+                  ¥{totalUsed.toLocaleString()}
+                </p>
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">使用</p>
+              </div>
+              <div className="text-right">
                 <p className="font-numeric text-xs tabular-nums text-muted-foreground">
                   ¥{totalBudget.toLocaleString()}
                 </p>
                 <p className="text-[10px] text-muted-foreground/60 mt-0.5">予算</p>
-              </>
-            )}
-          </div>
-        </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* カテゴリ別内訳（通常財布のみ） */}

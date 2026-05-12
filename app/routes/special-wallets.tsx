@@ -370,61 +370,52 @@ function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
           </button>
         </div>
 
-        {/* ヒーロー: 予算設定時は残り/オーバー、未設定時は使用額 */}
-        <p className="text-[11px] text-muted-foreground/80 mb-1">
-          {hasBudget ? (isOver ? "オーバー" : "残り") : "使用"}
-        </p>
-        <p
-          className={cn(
-            "font-numeric text-[2.5rem] font-extrabold leading-none tracking-tight tabular-nums",
-            isOver ? "text-destructive" : "text-foreground",
-          )}
-        >
-          <span className="text-2xl font-bold mr-0.5 align-baseline opacity-70">
-            ¥
-          </span>
-          {hasBudget
-            ? Math.abs(remaining).toLocaleString()
-            : totalUsed.toLocaleString()}
-        </p>
-
-        {/* プログレスバー（予算設定時のみ） */}
-        {hasBudget && (
-          <div className="mt-4 h-1.5 bg-foreground/8 rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-500 ease-out"
-              style={{
-                width: `${Math.min(usagePercentage, 100)}%`,
-                backgroundColor: barColor,
-              }}
-            />
-          </div>
-        )}
-
-        {/* 使用 / 予算 */}
-        <div className={cn("flex justify-between", hasBudget ? "mt-2.5" : "mt-4")}>
-          <div>
-            <p className="font-numeric text-xs tabular-nums text-muted-foreground">
-              ¥{totalUsed.toLocaleString()}
+        {/* 予算未設定: コンパクト表示。設定時は残り/オーバー + バー + 使用/予算 */}
+        {hasBudget ? (
+          <>
+            <p className="text-[11px] text-muted-foreground/80 mb-1">
+              {isOver ? "オーバー" : "残り"}
             </p>
-            <p className="text-[10px] text-muted-foreground/60 mt-0.5">使用</p>
-          </div>
-          <div className="text-right">
-            {hasBudget ? (
-              <>
+            <p
+              className={cn(
+                "font-numeric text-[2.5rem] font-extrabold leading-none tracking-tight tabular-nums",
+                isOver ? "text-destructive" : "text-foreground",
+              )}
+            >
+              <span className="text-2xl font-bold mr-0.5 align-baseline opacity-70">
+                ¥
+              </span>
+              {Math.abs(remaining).toLocaleString()}
+            </p>
+
+            <div className="mt-4 h-1.5 bg-foreground/8 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-500 ease-out"
+                style={{
+                  width: `${Math.min(usagePercentage, 100)}%`,
+                  backgroundColor: barColor,
+                }}
+              />
+            </div>
+
+            <div className="mt-2.5 flex justify-between">
+              <div>
+                <p className="font-numeric text-xs tabular-nums text-muted-foreground">
+                  ¥{totalUsed.toLocaleString()}
+                </p>
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">使用</p>
+              </div>
+              <div className="text-right">
                 <p className="font-numeric text-xs tabular-nums text-muted-foreground">
                   ¥{totalBudget.toLocaleString()}
                 </p>
                 <p className="text-[10px] text-muted-foreground/60 mt-0.5">予算</p>
-              </>
-            ) : (
-              <>
-                <p className="text-xs text-muted-foreground/50">未設定</p>
-                <p className="text-[10px] text-muted-foreground/60 mt-0.5">予算</p>
-              </>
-            )}
-          </div>
-        </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground/50 mt-1">予算未設定</p>
+        )}
       </div>
 
       {/* 予算編集（月次予算の編集行と同じ dirty-aware パターンで統一） */}
@@ -443,6 +434,7 @@ function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
             initialValue={totalBudget > 0 ? totalBudget : undefined}
             placeholder="0"
             isPending={budgetFetcher.state !== "idle"}
+            disabled={isSettled}
           />
         </budgetFetcher.Form>
       </div>
