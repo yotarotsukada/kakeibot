@@ -55,8 +55,8 @@ function EyesFlat() {
 function EyesArch() {
   return (
     <>
-      <path d="M 6.5 13 Q 8.5 10.5 10.5 13" />
-      <path d="M 13.5 13 Q 15.5 10.5 17.5 13" />
+      <path d="M 6.5 12.5 Q 8.5 10.5 10.5 12.5" />
+      <path d="M 13.5 12.5 Q 15.5 10.5 17.5 12.5" />
       <circle cx="6.2"  cy="16.8" r="1.3" fill="currentColor" stroke="none" opacity={0.28} />
       <circle cx="17.8" cy="16.8" r="1.3" fill="currentColor" stroke="none" opacity={0.28} />
     </>
