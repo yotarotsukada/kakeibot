@@ -23,7 +23,7 @@ export function AddCategoryForm({
   selectedMonth,
 }: AddCategoryFormProps) {
   const navigation = useNavigation();
-  const isPending = navigation.state !== "idle";
+  const isPending = navigation.state === "submitting";
 
   return (
     <Form method="post" className="flex items-center gap-3 py-3">
