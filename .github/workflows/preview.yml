@@ -1,0 +1,113 @@
+name: Preview Deployment
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened, closed]
+
+jobs:
+  deploy-preview:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build project
+        run: pnpm run build
+
+      - name: Deploy preview Worker
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --env preview --name kakeibot-pr-${{ github.event.pull_request.number }}
+
+      - name: Set preview secrets (Google Sheets)
+        run: |
+          echo "$GOOGLE_SERVICE_ACCOUNT_EMAIL" | \
+            npx wrangler secret put GOOGLE_SERVICE_ACCOUNT_EMAIL \
+              --name kakeibot-pr-${{ github.event.pull_request.number }}
+          echo "$SPREADSHEET_ID" | \
+            npx wrangler secret put SPREADSHEET_ID \
+              --name kakeibot-pr-${{ github.event.pull_request.number }}
+          printf '%s' "$GOOGLE_PRIVATE_KEY" | \
+            npx wrangler secret put GOOGLE_PRIVATE_KEY \
+              --name kakeibot-pr-${{ github.event.pull_request.number }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GOOGLE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.PREVIEW_GOOGLE_SERVICE_ACCOUNT_EMAIL }}
+          SPREADSHEET_ID: ${{ secrets.PREVIEW_SPREADSHEET_ID }}
+          GOOGLE_PRIVATE_KEY: ${{ secrets.PREVIEW_GOOGLE_PRIVATE_KEY }}
+
+      - name: Comment preview URL on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = '${{ steps.deploy.outputs.deployment-url }}';
+            const body = [
+              '## プレビュー環境',
+              `🚀 **${url}**`,
+              '',
+              '| 設定 | 値 |',
+              '|------|-----|',
+              '| 認証 | モック（自動ログイン） |',
+              '| ストレージ | プレビュー用スプレッドシート |',
+              '| LINE / AI | モック |',
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(
+              (c) => c.body.includes('プレビュー環境') && c.user.type === 'Bot'
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+  cleanup-preview:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Delete preview Worker
+        run: |
+          curl -s -X DELETE \
+            "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CLOUDFLARE_ACCOUNT_ID }}/workers/scripts/kakeibot-pr-${{ github.event.pull_request.number }}" \
+            -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+            -H "Content-Type: application/json"
