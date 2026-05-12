@@ -322,8 +322,8 @@ function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
         "rounded-3xl gap-0 py-0 ring-1 shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.15)]",
         "transition-all duration-500",
         isSettled
-          ? "opacity-60 ring-foreground/[0.04]"
-          : "opacity-100 ring-foreground/[0.06]",
+          ? "bg-muted/40 ring-foreground/[0.04]"
+          : "ring-foreground/[0.06]",
       )}
     >
       <div className="px-6 pt-5 pb-5">
@@ -339,7 +339,7 @@ function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
                   strokeWidth={2.5}
                   className="opacity-70"
                 />
-                精算を完了
+                精算済み
               </span>
             )}
           </div>
