@@ -74,7 +74,7 @@ export function BudgetOverviewCard({
           </PieChart>
         </div>
 
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 text-right">
           <p className="text-[11px] text-muted-foreground/80 mb-1">
             予算総額
           </p>
