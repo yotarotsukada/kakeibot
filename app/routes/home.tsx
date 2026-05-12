@@ -97,7 +97,7 @@ export default function Home() {
               to="/special-wallets"
               className="text-[11px] font-semibold text-muted-foreground/70 tracking-wider hover:text-primary transition-colors"
             >
-              財布
+              最近の財布
             </Link>
             <span className="h-px flex-1 bg-border" aria-hidden />
           </div>

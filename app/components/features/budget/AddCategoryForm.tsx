@@ -1,6 +1,6 @@
 import { PlusSignIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Form } from "react-router";
+import { Form, useNavigation } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { MoneyInput } from "./MoneyInput";
@@ -22,6 +22,9 @@ export function AddCategoryForm({
   walletName,
   selectedMonth,
 }: AddCategoryFormProps) {
+  const navigation = useNavigation();
+  const isPending = navigation.state !== "idle";
+
   return (
     <Form method="post" className="flex items-center gap-3 py-3">
       <span
@@ -36,22 +39,29 @@ export function AddCategoryForm({
         name="categoryName"
         placeholder="あたらしいカテゴリ"
         required
+        disabled={isPending}
         className="flex-1 bg-muted/40 placeholder:text-muted-foreground/60"
       />
       <MoneyInput
         name="amount"
         placeholder="金額"
         required
+        disabled={isPending}
         wrapperClassName="w-28"
         className="bg-muted/40"
       />
       <Button
         type="submit"
         size="icon-sm"
-        aria-label="追加"
+        aria-label={isPending ? "追加中" : "追加"}
+        disabled={isPending}
         className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shrink-0"
       >
-        <HugeiconsIcon icon={PlusSignIcon} size={14} strokeWidth={2.5} />
+        {isPending ? (
+          <span className="size-3 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+        ) : (
+          <HugeiconsIcon icon={PlusSignIcon} size={14} strokeWidth={2.5} />
+        )}
       </Button>
     </Form>
   );

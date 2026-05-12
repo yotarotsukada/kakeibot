@@ -2,8 +2,10 @@
  * Action 失敗を JSON で返すための最小ヘルパ。
  *
  * 規約:
- *   - Action は失敗時のみ `actionError(appError)` を返す。
- *   - 成功時は `redirect(...)` する（成功トーストは出さない。視覚的変化を feedback とする）。
+ *   - Action は失敗時のみ `actionError(appError)` を返す。成功時は以下の2パターン：
+ *     A. ページ遷移を伴う操作（フォーム送信→別状態へ移動）: `redirect(...)` を返す
+ *     B. ページ内インタラクション（useFetcher 経由）: `null` を返す
+ *   - 成功トーストは出さない。視覚的変化（リダイレクトやローダー再実行）を feedback とする。
  *   - 画面側は `useActionErrorToast(actionData)` を呼ぶだけで自動でトーストが出る。
  */
 

@@ -348,6 +348,7 @@ function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
             name="amount"
             initialValue={totalBudget > 0 ? totalBudget : undefined}
             placeholder="0"
+            isPending={budgetFetcher.state !== "idle"}
           />
         </budgetFetcher.Form>
       </div>
