@@ -4,7 +4,6 @@
 
 import {
   type BudgetRecord,
-  SPECIAL_WALLET_CATEGORY,
   type Wallet,
 } from "~/domain/budget/budget";
 import type { LedgerEntry } from "~/domain/ledger/entry";
@@ -42,17 +41,17 @@ const SEED_BUDGETS: BudgetRecord[] = [
   // 特別財布は合計予算を1件（予約カテゴリ）で保持する
   {
     walletName: "沖縄旅行",
-    categoryName: SPECIAL_WALLET_CATEGORY,
+    categoryName: "一括",
     amount: 200000,
   },
   {
     walletName: "新居家具",
-    categoryName: SPECIAL_WALLET_CATEGORY,
+    categoryName: "一括",
     amount: 230000,
   },
   {
     walletName: "結婚記念旅行",
-    categoryName: SPECIAL_WALLET_CATEGORY,
+    categoryName: "一括",
     amount: 120000,
   },
 ];
@@ -290,6 +289,18 @@ export class MockStorage implements Storage {
         `[MockStorage] 💳 精算フラグ更新: ${walletName} → ${settled}`,
       );
     }
+  }
+
+  async renameWallet(oldName: string, newName: string): Promise<void> {
+    const wallet = this.wallets.find((w) => w.name === oldName);
+    if (wallet) wallet.name = newName;
+    for (const b of this.budgets) {
+      if (b.walletName === oldName) b.walletName = newName;
+    }
+    for (const e of this.ledger) {
+      if (e.wallet === oldName) e.wallet = newName;
+    }
+    console.log(`[MockStorage] 💳 財布名変更: ${oldName} → ${newName}`);
   }
 
   async getCategories(): Promise<string[]> {

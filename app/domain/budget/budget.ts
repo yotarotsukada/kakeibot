@@ -1,8 +1,5 @@
 import * as v from "valibot";
 
-/** 特別財布の予算記録に使う予約カテゴリ名。カテゴリマスタとは無関係。 */
-export const SPECIAL_WALLET_CATEGORY = "__special__" as const;
-
 export const BudgetRecordSchema = v.object({
   walletName: v.string(),
   categoryName: v.string(),
