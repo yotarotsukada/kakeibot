@@ -12,7 +12,7 @@ import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
 import { ValidationError } from "~/domain/errors";
 import { unwrap } from "~/domain/result";
-import { upsertBudget } from "~/features/budget/manage";
+import { deleteBudget, upsertBudget } from "~/features/budget/manage";
 import {
   createSpecialWallet,
   getSpecialWalletsPageData,
@@ -104,12 +104,13 @@ export async function action({
         }),
       );
     }
-    const result = await upsertBudget(
-      walletName,
-      "一括",
-      amount,
-      { storage },
-    );
+    // 0 を保存 = 予算を未設定に戻す
+    if (amount === 0) {
+      const result = await deleteBudget(walletName, "一括", { storage });
+      if (!result.ok) return actionError(result.error);
+      return null;
+    }
+    const result = await upsertBudget(walletName, "一括", amount, { storage });
     if (!result.ok) return actionError(result.error);
     return null;
   }
@@ -219,6 +220,78 @@ function FilterTabs({
   );
 }
 
+function WalletNameEditor({
+  name,
+  disabled,
+}: {
+  name: string;
+  disabled: boolean;
+}) {
+  const renameFetcher = useFetcher<ActionError | null>();
+  useActionErrorToast(renameFetcher.data as ActionError | undefined);
+
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(name);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) inputRef.current?.select();
+  }, [editing]);
+
+  function submit() {
+    const trimmed = draft.trim();
+    if (trimmed && trimmed !== name) {
+      renameFetcher.submit(
+        { intent: "rename-wallet", oldWalletName: name, newWalletName: trimmed },
+        { method: "post" },
+      );
+    }
+    setEditing(false);
+  }
+
+  function cancel() {
+    setDraft(name);
+    setEditing(false);
+  }
+
+  const isPending = renameFetcher.state !== "idle";
+  const displayName =
+    isPending && renameFetcher.formData
+      ? String(renameFetcher.formData.get("newWalletName") ?? name)
+      : name;
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={submit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") { e.preventDefault(); submit(); }
+          if (e.key === "Escape") cancel();
+        }}
+        className="text-sm font-semibold text-foreground bg-transparent border-b border-foreground/30 outline-none min-w-0 w-full max-w-[180px]"
+        maxLength={40}
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      disabled={disabled || isPending}
+      onClick={() => { setDraft(name); setEditing(true); }}
+      className={cn(
+        "text-sm font-semibold text-foreground truncate text-left hover:opacity-70 transition-opacity",
+        (disabled || isPending) && "pointer-events-none opacity-60",
+      )}
+    >
+      {displayName}
+    </button>
+  );
+}
+
 function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
   const { wallet, totalBudget, totalUsed, usagePercentage } = item;
 
@@ -257,9 +330,7 @@ function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
         {/* ヘッダー行: 財布名 + 精算バッジ / 精算ボタン */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 min-w-0">
-            <p className="text-sm font-semibold text-foreground truncate">
-              {wallet.name}
-            </p>
+            <WalletNameEditor name={wallet.name} disabled={isSettled} />
             {isSettled && (
               <span className="inline-flex items-center gap-1 shrink-0 text-[10px] font-medium text-muted-foreground/80 bg-foreground/[0.06] rounded-full px-2 py-0.5">
                 <HugeiconsIcon
@@ -367,6 +438,7 @@ function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
           <input type="hidden" name="walletName" value={wallet.name} />
           <p className="text-[11px] text-muted-foreground/70">予算</p>
           <InlineBudgetField
+            key={totalBudget}
             name="amount"
             initialValue={totalBudget > 0 ? totalBudget : undefined}
             placeholder="0"
