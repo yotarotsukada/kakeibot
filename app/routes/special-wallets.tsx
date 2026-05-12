@@ -10,7 +10,6 @@ import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
-import { SPECIAL_WALLET_CATEGORY } from "~/domain/budget/budget";
 import { ValidationError } from "~/domain/errors";
 import { unwrap } from "~/domain/result";
 import { upsertBudget } from "~/features/budget/manage";
@@ -67,7 +66,7 @@ export async function action({
     if (budgetAmount > 0) {
       const budgetResult = await upsertBudget(
         walletName.trim(),
-        SPECIAL_WALLET_CATEGORY,
+        "一括",
         budgetAmount,
         { storage },
       );
@@ -107,7 +106,7 @@ export async function action({
     }
     const result = await upsertBudget(
       walletName,
-      SPECIAL_WALLET_CATEGORY,
+      "一括",
       amount,
       { storage },
     );

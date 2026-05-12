@@ -4,7 +4,6 @@
 
 import {
   type BudgetRecord,
-  SPECIAL_WALLET_CATEGORY,
   type Wallet,
 } from "~/domain/budget/budget";
 import type { LedgerEntry } from "~/domain/ledger/entry";
@@ -42,17 +41,17 @@ const SEED_BUDGETS: BudgetRecord[] = [
   // 特別財布は合計予算を1件（予約カテゴリ）で保持する
   {
     walletName: "沖縄旅行",
-    categoryName: SPECIAL_WALLET_CATEGORY,
+    categoryName: "一括",
     amount: 200000,
   },
   {
     walletName: "新居家具",
-    categoryName: SPECIAL_WALLET_CATEGORY,
+    categoryName: "一括",
     amount: 230000,
   },
   {
     walletName: "結婚記念旅行",
-    categoryName: SPECIAL_WALLET_CATEGORY,
+    categoryName: "一括",
     amount: 120000,
   },
 ];
