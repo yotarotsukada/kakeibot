@@ -290,7 +290,8 @@ export class MockStorage implements Storage {
   }
 
   async getLedgerEntriesByWallet(walletName: string): Promise<LedgerEntry[]> {
-    return this.ledger.filter((e) => e.wallet === walletName);
+    const entries = await this.getLedgerEntriesForCalendar(walletName);
+    return entries.map(({ id: _id, ...entry }) => entry);
   }
 
   async getLedgerEntriesForCalendar(

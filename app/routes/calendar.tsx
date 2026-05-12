@@ -60,10 +60,10 @@ export async function action({
   const entryId = String(formData.get("entryId") ?? "");
   const categoryName = String(formData.get("categoryName") ?? "");
 
-  if (!entryId || !categoryName) {
+  if (!entryId) {
     return actionError(
       new ValidationError({
-        message: "entryId and categoryName are required",
+        message: "entryId is required",
         userMessage: "必須項目が不足しています。",
       }),
     );
@@ -97,19 +97,16 @@ function EntryRow({
   const actionData = fetcher.data as ActionError | null | undefined;
   useActionErrorToast(actionData);
 
-  // 予算カテゴリにない場合は「未分類」として扱う
+  // 予算カテゴリにない場合は空文字（未分類 option の value と一致させる）
   const resolvedCategory = categories.includes(entry.category)
     ? entry.category
-    : UNCATEGORIZED;
+    : "";
   const optimisticCategory =
     (fetcher.formData?.get("categoryName") as string | null) ??
     resolvedCategory;
   const isPending = fetcher.state !== "idle";
 
   const dotColor = colorMap.get(optimisticCategory) ?? UNCATEGORIZED_COLOR;
-
-  // 選択肢: 予算カテゴリ + 「未分類」（常時表示）
-  const options = [...categories, UNCATEGORIZED];
 
   return (
     <div className="bg-background rounded-2xl px-4 py-3 flex items-start gap-3 border border-border/30 shadow-[0_1px_4px_-2px_oklch(0.30_0.02_30_/_0.08)]">
@@ -133,11 +130,13 @@ function EntryRow({
             }}
             className="text-[13px] font-medium rounded-lg border border-border/40 bg-muted px-2 py-0.5 text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
           >
-            {options.map((cat) => (
+            {categories.map((cat) => (
               <option key={cat} value={cat}>
                 {cat}
               </option>
             ))}
+            {/* value="" で空文字をシートに書き込み、既存の未分類集計ロジックと整合させる */}
+            <option value="">{UNCATEGORIZED}</option>
           </select>
         </div>
         {entry.memo && (

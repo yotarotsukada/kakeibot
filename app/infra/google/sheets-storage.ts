@@ -422,32 +422,8 @@ export class GoogleSheetsStorage implements Storage {
   }
 
   async getLedgerEntriesByWallet(walletName: string): Promise<LedgerEntry[]> {
-    try {
-      const token = await this.getAccessToken();
-      const range = `${SHEET_NAMES.LEDGER}!A:I`;
-      const url = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(range)}`;
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return [];
-      const data = (await res.json()) as { values?: string[][] };
-      if (!data.values) return [];
-      return data.values
-        .slice(1)
-        .filter((row) => row[6] === walletName)
-        .map((row) => ({
-          date: row[1],
-          type: row[2] as "入金" | "支出",
-          amount: Number(row[3]) || 0,
-          actor: row[4],
-          category: row[5],
-          wallet: row[6],
-          shouldSettle: row[7] === "TRUE",
-          memo: row[8] ?? "",
-        }));
-    } catch (err) {
-      throw new GoogleSheetsError("元帳の取得に失敗しました", err);
-    }
+    const entries = await this.getLedgerEntriesForCalendar(walletName);
+    return entries.map(({ id: _id, ...entry }) => entry);
   }
 
   async getLatestLedgerEntry(): Promise<{
