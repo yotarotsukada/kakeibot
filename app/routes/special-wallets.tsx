@@ -219,79 +219,6 @@ function FilterTabs({
   );
 }
 
-function WalletNameEditor({
-  name,
-  disabled,
-}: {
-  name: string;
-  disabled: boolean;
-}) {
-  const renameFetcher = useFetcher<ActionError | null>();
-  useActionErrorToast(renameFetcher.data as ActionError | undefined);
-
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(name);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (editing) inputRef.current?.select();
-  }, [editing]);
-
-  function submit() {
-    const trimmed = draft.trim();
-    if (trimmed && trimmed !== name) {
-      renameFetcher.submit(
-        { intent: "rename-wallet", oldWalletName: name, newWalletName: trimmed },
-        { method: "post" },
-      );
-    }
-    setEditing(false);
-  }
-
-  function cancel() {
-    setDraft(name);
-    setEditing(false);
-  }
-
-  const isPending = renameFetcher.state !== "idle";
-  const displayName =
-    isPending && renameFetcher.formData
-      ? String(renameFetcher.formData.get("newWalletName") ?? name)
-      : name;
-
-  if (editing) {
-    return (
-      <input
-        ref={inputRef}
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={submit}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") { e.preventDefault(); submit(); }
-          if (e.key === "Escape") cancel();
-        }}
-        className="text-xs font-medium text-foreground/70 bg-transparent border-b border-foreground/30 outline-none min-w-0 w-full max-w-[160px]"
-        maxLength={40}
-      />
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      disabled={disabled || isPending}
-      onClick={() => { setDraft(name); setEditing(true); }}
-      className={cn(
-        "text-xs font-medium text-foreground/70 truncate text-left hover:text-foreground/90 transition-colors",
-        "border-b border-transparent hover:border-foreground/20",
-        (disabled || isPending) && "pointer-events-none opacity-60",
-      )}
-    >
-      {displayName}
-    </button>
-  );
-}
-
 function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
   const { wallet, totalBudget, totalUsed, usagePercentage } = item;
 
@@ -301,13 +228,14 @@ function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
   useActionErrorToast(settleFetcher.data as ActionError | undefined);
   useActionErrorToast(budgetFetcher.data as ActionError | undefined);
 
+  const hasBudget = totalBudget > 0;
   const isSettled = wallet.settled;
   const isSettling =
     settleFetcher.state !== "idle" &&
     settleFetcher.formData?.get("intent") === "toggle-settled";
 
   const remaining = totalBudget - totalUsed;
-  const isOver = remaining < 0;
+  const isOver = hasBudget && remaining < 0;
 
   const barColor = isSettled
     ? "oklch(0.72 0.02 265)"
@@ -329,7 +257,9 @@ function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
         {/* ヘッダー行: 財布名 + 精算バッジ / 精算ボタン */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 min-w-0">
-            <WalletNameEditor name={wallet.name} disabled={isSettled} />
+            <p className="text-sm font-semibold text-foreground truncate">
+              {wallet.name}
+            </p>
             {isSettled && (
               <span className="inline-flex items-center gap-1 shrink-0 text-[10px] font-medium text-muted-foreground/80 bg-foreground/[0.06] rounded-full px-2 py-0.5">
                 <HugeiconsIcon
@@ -369,9 +299,9 @@ function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
           </button>
         </div>
 
-        {/* 残り金額 */}
+        {/* ヒーロー: 予算設定時は残り/オーバー、未設定時は使用額 */}
         <p className="text-[11px] text-muted-foreground/80 mb-1">
-          {isOver ? "オーバー" : "残り"}
+          {hasBudget ? (isOver ? "オーバー" : "残り") : "使用"}
         </p>
         <p
           className={cn(
@@ -382,22 +312,26 @@ function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
           <span className="text-2xl font-bold mr-0.5 align-baseline opacity-70">
             ¥
           </span>
-          {Math.abs(remaining).toLocaleString()}
+          {hasBudget
+            ? Math.abs(remaining).toLocaleString()
+            : totalUsed.toLocaleString()}
         </p>
 
-        {/* プログレスバー */}
-        <div className="mt-4 h-1.5 bg-foreground/8 rounded-full overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all duration-500 ease-out"
-            style={{
-              width: `${Math.min(usagePercentage, 100)}%`,
-              backgroundColor: barColor,
-            }}
-          />
-        </div>
+        {/* プログレスバー（予算設定時のみ） */}
+        {hasBudget && (
+          <div className="mt-4 h-1.5 bg-foreground/8 rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500 ease-out"
+              style={{
+                width: `${Math.min(usagePercentage, 100)}%`,
+                backgroundColor: barColor,
+              }}
+            />
+          </div>
+        )}
 
         {/* 使用 / 予算 */}
-        <div className="mt-2.5 flex justify-between">
+        <div className={cn("flex justify-between", hasBudget ? "mt-2.5" : "mt-4")}>
           <div>
             <p className="font-numeric text-xs tabular-nums text-muted-foreground">
               ¥{totalUsed.toLocaleString()}
@@ -405,10 +339,19 @@ function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
             <p className="text-[10px] text-muted-foreground/60 mt-0.5">使用</p>
           </div>
           <div className="text-right">
-            <p className="font-numeric text-xs tabular-nums text-muted-foreground">
-              ¥{totalBudget.toLocaleString()}
-            </p>
-            <p className="text-[10px] text-muted-foreground/60 mt-0.5">予算</p>
+            {hasBudget ? (
+              <>
+                <p className="font-numeric text-xs tabular-nums text-muted-foreground">
+                  ¥{totalBudget.toLocaleString()}
+                </p>
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">予算</p>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-muted-foreground/50">未設定</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">予算</p>
+              </>
+            )}
           </div>
         </div>
       </div>
