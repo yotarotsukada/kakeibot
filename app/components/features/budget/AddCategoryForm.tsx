@@ -23,7 +23,9 @@ export function AddCategoryForm({
   selectedMonth,
 }: AddCategoryFormProps) {
   const navigation = useNavigation();
-  const isPending = navigation.state === "submitting";
+  const isPending =
+    navigation.state !== "idle" &&
+    navigation.formData?.get("intent") === "upsert";
 
   return (
     <Form method="post" className="flex items-center gap-3 py-3">
