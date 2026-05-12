@@ -88,12 +88,12 @@ function EyesDot() {
   );
 }
 
-// 5. (≧ω≦)  大アーチ目 ─ 感激・大喜び
-function EyesBigArch() {
+// 5. (• ω ˘)  ウィンク ─ 片目まるまる + 片目アーチで茶目っ気
+function EyesWink() {
   return (
     <>
-      <path d="M 6.5 14 Q 8.5 8.5 10.5 14" />
-      <path d="M 13.5 14 Q 15.5 8.5 17.5 14" />
+      <circle cx="9" cy="12" r="1.6" fill="currentColor" stroke="none" />
+      <path d="M 13.5 12.5 Q 15.5 10.5 17.5 12.5" />
     </>
   );
 }
@@ -105,7 +105,7 @@ const EYES = {
   2: EyesArch,
   3: EyesAngle,
   4: EyesDot,
-  5: EyesBigArch,
+  5: EyesWink,
 } as const;
 
 export function CatSavingsIcon({ variant, className, size = 16 }: Props) {
