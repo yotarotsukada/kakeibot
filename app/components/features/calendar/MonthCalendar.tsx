@@ -140,7 +140,7 @@ export function MonthCalendar({
               {isSavingDay && (
                 <CatSavingsIcon
                   variant={catVariant}
-                  size={14}
+                  size={16}
                   className="text-primary/70"
                 />
               )}
