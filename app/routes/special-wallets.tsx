@@ -17,6 +17,7 @@ import { upsertBudget } from "~/features/budget/manage";
 import {
   createSpecialWallet,
   getSpecialWalletsPageData,
+  renameSpecialWallet,
   type SpecialWalletSummary,
   toggleWalletSettled,
 } from "~/features/budget/special-wallet";
@@ -73,6 +74,14 @@ export async function action({
       if (!budgetResult.ok) return actionError(budgetResult.error);
     }
 
+    return null;
+  }
+
+  if (intent === "rename-wallet") {
+    const oldName = String(formData.get("oldWalletName") ?? "");
+    const newName = String(formData.get("newWalletName") ?? "");
+    const result = await renameSpecialWallet(oldName, newName, { storage });
+    if (!result.ok) return actionError(result.error);
     return null;
   }
 
@@ -211,6 +220,79 @@ function FilterTabs({
   );
 }
 
+function WalletNameEditor({
+  name,
+  disabled,
+}: {
+  name: string;
+  disabled: boolean;
+}) {
+  const renameFetcher = useFetcher<ActionError | null>();
+  useActionErrorToast(renameFetcher.data as ActionError | undefined);
+
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(name);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) inputRef.current?.select();
+  }, [editing]);
+
+  function submit() {
+    const trimmed = draft.trim();
+    if (trimmed && trimmed !== name) {
+      renameFetcher.submit(
+        { intent: "rename-wallet", oldWalletName: name, newWalletName: trimmed },
+        { method: "post" },
+      );
+    }
+    setEditing(false);
+  }
+
+  function cancel() {
+    setDraft(name);
+    setEditing(false);
+  }
+
+  const isPending = renameFetcher.state !== "idle";
+  const displayName =
+    isPending && renameFetcher.formData
+      ? String(renameFetcher.formData.get("newWalletName") ?? name)
+      : name;
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={submit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") { e.preventDefault(); submit(); }
+          if (e.key === "Escape") cancel();
+        }}
+        className="text-xs font-medium text-foreground/70 bg-transparent border-b border-foreground/30 outline-none min-w-0 w-full max-w-[160px]"
+        maxLength={40}
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      disabled={disabled || isPending}
+      onClick={() => { setDraft(name); setEditing(true); }}
+      className={cn(
+        "text-xs font-medium text-foreground/70 truncate text-left hover:text-foreground/90 transition-colors",
+        "border-b border-transparent hover:border-foreground/20",
+        (disabled || isPending) && "pointer-events-none opacity-60",
+      )}
+    >
+      {displayName}
+    </button>
+  );
+}
+
 function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
   const { wallet, totalBudget, totalUsed, usagePercentage } = item;
 
@@ -248,9 +330,7 @@ function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
         {/* ヘッダー行: 財布名 + 精算バッジ / 精算ボタン */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 min-w-0">
-            <p className="text-xs font-medium text-foreground/70 truncate">
-              {wallet.name}
-            </p>
+            <WalletNameEditor name={wallet.name} disabled={isSettled} />
             {isSettled && (
               <span className="inline-flex items-center gap-1 shrink-0 text-[10px] font-medium text-muted-foreground/80 bg-foreground/[0.06] rounded-full px-2 py-0.5">
                 <HugeiconsIcon

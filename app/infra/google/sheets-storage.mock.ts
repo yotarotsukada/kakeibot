@@ -292,6 +292,18 @@ export class MockStorage implements Storage {
     }
   }
 
+  async renameWallet(oldName: string, newName: string): Promise<void> {
+    const wallet = this.wallets.find((w) => w.name === oldName);
+    if (wallet) wallet.name = newName;
+    for (const b of this.budgets) {
+      if (b.walletName === oldName) b.walletName = newName;
+    }
+    for (const e of this.ledger) {
+      if (e.wallet === oldName) e.wallet = newName;
+    }
+    console.log(`[MockStorage] 💳 財布名変更: ${oldName} → ${newName}`);
+  }
+
   async getCategories(): Promise<string[]> {
     return this.categories;
   }

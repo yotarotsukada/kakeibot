@@ -105,6 +105,40 @@ export async function createSpecialWallet(
   }
 }
 
+export async function renameSpecialWallet(
+  oldName: string,
+  newName: string,
+  deps: { storage: Storage },
+): Promise<Result<void, AppError>> {
+  const trimmedNew = newName.trim();
+  if (!trimmedNew) {
+    return err(
+      new ValidationError({
+        message: "newName is empty",
+        userMessage: "財布名を入力してください。",
+      }),
+    );
+  }
+  if (oldName === trimmedNew) return ok(undefined);
+
+  try {
+    const wallets = await deps.storage.getWallets();
+    if (wallets.some((w) => w.name === trimmedNew)) {
+      return err(
+        new BusinessRuleError({
+          message: `wallet already exists: ${trimmedNew}`,
+          userMessage: "同じ名前の財布がすでに存在します。",
+          code: "WALLET_ALREADY_EXISTS",
+        }),
+      );
+    }
+    await deps.storage.renameWallet(oldName, trimmedNew);
+    return ok(undefined);
+  } catch (e) {
+    return err(wrapUnknownError(e));
+  }
+}
+
 export async function toggleWalletSettled(
   walletName: string,
   settled: boolean,

@@ -345,6 +345,83 @@ export class GoogleSheetsStorage implements Storage {
     }
   }
 
+  async renameWallet(oldName: string, newName: string): Promise<void> {
+    try {
+      const token = await this.getAccessToken();
+
+      const [walletData, budgetData, ledgerData] = await Promise.all([
+        fetch(
+          `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(`${SHEET_NAMES.WALLET_MASTER}!A:A`)}`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        ).then((r) => r.json() as Promise<{ values?: string[][] }>),
+        fetch(
+          `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(`${SHEET_NAMES.BUDGET}!A:A`)}`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        ).then((r) => r.json() as Promise<{ values?: string[][] }>),
+        fetch(
+          `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(`${SHEET_NAMES.LEDGER}!G:G`)}`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        ).then((r) => r.json() as Promise<{ values?: string[][] }>),
+      ]);
+
+      const updates: { range: string; values: string[][] }[] = [];
+
+      for (let i = 1; i < (walletData.values?.length ?? 0); i++) {
+        if (walletData.values?.[i]?.[0] === oldName) {
+          updates.push({
+            range: `${SHEET_NAMES.WALLET_MASTER}!A${i + 1}`,
+            values: [[newName]],
+          });
+          break;
+        }
+      }
+
+      for (let i = 1; i < (budgetData.values?.length ?? 0); i++) {
+        if (budgetData.values?.[i]?.[0] === oldName) {
+          updates.push({
+            range: `${SHEET_NAMES.BUDGET}!A${i + 1}`,
+            values: [[newName]],
+          });
+        }
+      }
+
+      for (let i = 1; i < (ledgerData.values?.length ?? 0); i++) {
+        if (ledgerData.values?.[i]?.[0] === oldName) {
+          updates.push({
+            range: `${SHEET_NAMES.LEDGER}!G${i + 1}`,
+            values: [[newName]],
+          });
+        }
+      }
+
+      if (updates.length === 0) return;
+
+      const batchUrl = `${SHEETS_BASE}/${this.spreadsheetId}/values:batchUpdate`;
+      const batchRes = await fetch(batchUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          valueInputOption: "USER_ENTERED",
+          data: updates.map((u) => ({
+            range: u.range,
+            majorDimension: "ROWS",
+            values: u.values,
+          })),
+        }),
+      });
+      if (!batchRes.ok)
+        throw new Error(
+          `Sheets batch update failed: ${batchRes.status} ${await batchRes.text()}`,
+        );
+    } catch (err) {
+      if (err instanceof GoogleSheetsError) throw err;
+      throw new GoogleSheetsError("財布名の変更に失敗しました", err);
+    }
+  }
+
   async getCategories(): Promise<string[]> {
     try {
       const token = await this.getAccessToken();
