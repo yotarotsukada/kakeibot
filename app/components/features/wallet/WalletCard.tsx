@@ -162,9 +162,7 @@ function MiscRow({ usedAmount }: { usedAmount: number }) {
         className="size-2 rounded-full shrink-0 translate-y-[-1px] bg-foreground/25"
         aria-hidden
       />
-      <span className="text-sm text-foreground font-medium flex-1">
-        未分類
-      </span>
+      <span className="text-sm text-foreground font-medium flex-1">未分類</span>
       <span className="font-numeric text-sm font-bold tabular-nums text-foreground/85">
         ¥{usedAmount.toLocaleString()}
       </span>

@@ -1,4 +1,5 @@
 import {
+  Calendar03Icon,
   Coins01Icon,
   PiggyBankIcon,
   Wallet01Icon,
@@ -34,6 +35,18 @@ export function BottomNav() {
               strokeWidth={isActive ? 2 : 1.5}
             />
             <span>家計</span>
+          </>
+        )}
+      </NavLink>
+      <NavLink to="/calendar" className={navLinkClass}>
+        {({ isActive }) => (
+          <>
+            <HugeiconsIcon
+              icon={Calendar03Icon}
+              size={22}
+              strokeWidth={isActive ? 2 : 1.5}
+            />
+            <span>カレンダー</span>
           </>
         )}
       </NavLink>

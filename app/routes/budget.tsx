@@ -1,4 +1,10 @@
-import { Form, redirect, useActionData, useLoaderData, useNavigation } from "react-router";
+import {
+  Form,
+  redirect,
+  useActionData,
+  useLoaderData,
+  useNavigation,
+} from "react-router";
 import { AddCategoryForm } from "~/components/features/budget/AddCategoryForm";
 import { BudgetOverviewCard } from "~/components/features/budget/BudgetOverviewCard";
 import { CategoryEditRow } from "~/components/features/budget/CategoryEditRow";
@@ -79,7 +85,9 @@ export async function action({
   }
 
   if (intent === "copyLastMonth") {
-    const result = await copyBudgetFromPrevMonth(walletName, month, { storage });
+    const result = await copyBudgetFromPrevMonth(walletName, month, {
+      storage,
+    });
     if (!result.ok) return actionError(result.error);
     return redirect(`/budget?month=${month}`);
   }

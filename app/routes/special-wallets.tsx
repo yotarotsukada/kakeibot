@@ -242,7 +242,11 @@ function WalletNameEditor({
     const trimmed = draft.trim();
     if (trimmed && trimmed !== name) {
       renameFetcher.submit(
-        { intent: "rename-wallet", oldWalletName: name, newWalletName: trimmed },
+        {
+          intent: "rename-wallet",
+          oldWalletName: name,
+          newWalletName: trimmed,
+        },
         { method: "post" },
       );
     }
@@ -268,7 +272,10 @@ function WalletNameEditor({
         onChange={(e) => setDraft(e.target.value)}
         onBlur={submit}
         onKeyDown={(e) => {
-          if (e.key === "Enter") { e.preventDefault(); submit(); }
+          if (e.key === "Enter") {
+            e.preventDefault();
+            submit();
+          }
           if (e.key === "Escape") cancel();
         }}
         className="text-sm font-semibold text-foreground bg-transparent border-b border-foreground/30 outline-none min-w-0 w-full max-w-[180px]"
@@ -281,7 +288,10 @@ function WalletNameEditor({
     <button
       type="button"
       disabled={disabled || isPending}
-      onClick={() => { setDraft(name); setEditing(true); }}
+      onClick={() => {
+        setDraft(name);
+        setEditing(true);
+      }}
       className={cn(
         "text-sm font-semibold text-foreground truncate text-left hover:opacity-70 transition-opacity",
         (disabled || isPending) && "pointer-events-none opacity-60",
