@@ -2,7 +2,11 @@
  * インメモリモックストレージ（開発用）。
  */
 
-import type { BudgetRecord, Wallet } from "~/domain/budget/budget";
+import {
+  type BudgetRecord,
+  SPECIAL_WALLET_CATEGORY,
+  type Wallet,
+} from "~/domain/budget/budget";
 import type { LedgerEntry } from "~/domain/ledger/entry";
 import type { Storage } from "~/domain/storage";
 import { SHEET_NAMES } from "~/domain/storage";
@@ -10,10 +14,12 @@ import { SHEET_NAMES } from "~/domain/storage";
 type StoredEntry = LedgerEntry & { transactionId: string };
 
 const SEED_WALLETS: Wallet[] = [
-  { name: "2026-05通常", type: "月次" },
-  { name: "2026-04通常", type: "月次" },
-  { name: "2026-03通常", type: "月次" },
-  { name: "沖縄旅行", type: "一括" },
+  { name: "2026-05通常", type: "月次", settled: false },
+  { name: "2026-04通常", type: "月次", settled: false },
+  { name: "2026-03通常", type: "月次", settled: false },
+  { name: "沖縄旅行", type: "特別", settled: false },
+  { name: "新居家具", type: "特別", settled: false },
+  { name: "結婚記念旅行", type: "特別", settled: true },
 ];
 
 const SEED_CATEGORIES: string[] = [
@@ -33,7 +39,22 @@ const SEED_BUDGETS: BudgetRecord[] = [
   { walletName: "2026-05通常", categoryName: "外食費", amount: 20000 },
   { walletName: "2026-04通常", categoryName: "食費", amount: 48000 },
   { walletName: "2026-04通常", categoryName: "日用品費", amount: 28000 },
-  { walletName: "沖縄旅行", categoryName: "旅費", amount: 200000 },
+  // 特別財布は合計予算を1件（予約カテゴリ）で保持する
+  {
+    walletName: "沖縄旅行",
+    categoryName: SPECIAL_WALLET_CATEGORY,
+    amount: 200000,
+  },
+  {
+    walletName: "新居家具",
+    categoryName: SPECIAL_WALLET_CATEGORY,
+    amount: 230000,
+  },
+  {
+    walletName: "結婚記念旅行",
+    categoryName: SPECIAL_WALLET_CATEGORY,
+    amount: 120000,
+  },
 ];
 
 const SEED_LEDGER: StoredEntry[] = [
@@ -103,7 +124,7 @@ const SEED_LEDGER: StoredEntry[] = [
     shouldSettle: true,
     memo: "週末の買い出し",
   },
-  // 沖縄旅行（最も直近のエントリ）
+  // 沖縄旅行（未精算の特別財布）
   {
     transactionId: "seed-007",
     date: "2026-05-06",
@@ -114,6 +135,41 @@ const SEED_LEDGER: StoredEntry[] = [
     wallet: "沖縄旅行",
     shouldSettle: true,
     memo: "航空券2名分",
+  },
+  // 新居家具（未精算の特別財布）
+  {
+    transactionId: "seed-011",
+    date: "2026-04-15",
+    type: "支出",
+    amount: 60000,
+    actor: "A",
+    category: "家具",
+    wallet: "新居家具",
+    shouldSettle: true,
+    memo: "ソファ",
+  },
+  {
+    transactionId: "seed-012",
+    date: "2026-05-02",
+    type: "支出",
+    amount: 45000,
+    actor: "B",
+    category: "家電",
+    wallet: "新居家具",
+    shouldSettle: true,
+    memo: "洗濯機",
+  },
+  // 結婚記念旅行（精算済みの特別財布）
+  {
+    transactionId: "seed-013",
+    date: "2026-03-10",
+    type: "支出",
+    amount: 110000,
+    actor: "A",
+    category: "旅費",
+    wallet: "結婚記念旅行",
+    shouldSettle: true,
+    memo: "京都温泉旅館",
   },
   // 2026-04通常 の履歴
   {
@@ -212,6 +268,28 @@ export class MockStorage implements Storage {
 
   async getWallets(): Promise<Wallet[]> {
     return this.wallets;
+  }
+
+  async upsertWallet(wallet: Wallet): Promise<void> {
+    const idx = this.wallets.findIndex((w) => w.name === wallet.name);
+    if (idx >= 0) {
+      this.wallets[idx] = wallet;
+    } else {
+      this.wallets.push(wallet);
+    }
+    console.log(
+      `[MockStorage] 💳 財布マスタ upsert: ${wallet.name} (${wallet.type}, settled=${wallet.settled})`,
+    );
+  }
+
+  async setWalletSettled(walletName: string, settled: boolean): Promise<void> {
+    const wallet = this.wallets.find((w) => w.name === walletName);
+    if (wallet) {
+      wallet.settled = settled;
+      console.log(
+        `[MockStorage] 💳 精算フラグ更新: ${walletName} → ${settled}`,
+      );
+    }
   }
 
   async getCategories(): Promise<string[]> {

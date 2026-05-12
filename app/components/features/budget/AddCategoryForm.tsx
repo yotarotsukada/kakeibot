@@ -1,8 +1,9 @@
 import { PlusSignIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Form } from "react-router";
+import { Form, useNavigation } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { MoneyInput } from "./MoneyInput";
 
 type AddCategoryFormProps = {
   walletName: string;
@@ -14,13 +15,16 @@ type AddCategoryFormProps = {
  *
  * デザイン意図:
  *   - 編集リストの末尾に視覚的に「続いて」追加できる空間を提示
- *   - 「あたらしいカテゴリ」をひらがな混じりにして親しみを出す
  *   - 追加ボタンは primary の丸ボタンで「ここを押せばいい」を明確に
+ *   - 金額入力は MoneyInput で他の予算系フォームと統一
  */
 export function AddCategoryForm({
   walletName,
   selectedMonth,
 }: AddCategoryFormProps) {
+  const navigation = useNavigation();
+  const isPending = navigation.state === "submitting";
+
   return (
     <Form method="post" className="flex items-center gap-3 py-3">
       <span
@@ -35,28 +39,29 @@ export function AddCategoryForm({
         name="categoryName"
         placeholder="あたらしいカテゴリ"
         required
+        disabled={isPending}
         className="flex-1 bg-muted/40 placeholder:text-muted-foreground/60"
       />
-      <div className="relative">
-        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground/60 pointer-events-none">
-          ¥
-        </span>
-        <Input
-          type="number"
-          name="amount"
-          placeholder="金額"
-          min={0}
-          required
-          className="w-24 pl-5 text-right tabular-nums font-numeric bg-muted/40"
-        />
-      </div>
+      <MoneyInput
+        name="amount"
+        placeholder="金額"
+        required
+        disabled={isPending}
+        wrapperClassName="w-28"
+        className="bg-muted/40"
+      />
       <Button
         type="submit"
         size="icon-sm"
-        aria-label="追加"
+        aria-label={isPending ? "追加中" : "追加"}
+        disabled={isPending}
         className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shrink-0"
       >
-        <HugeiconsIcon icon={PlusSignIcon} size={14} strokeWidth={2.5} />
+        {isPending ? (
+          <span className="size-3 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+        ) : (
+          <HugeiconsIcon icon={PlusSignIcon} size={14} strokeWidth={2.5} />
+        )}
       </Button>
     </Form>
   );

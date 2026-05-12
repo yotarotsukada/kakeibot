@@ -146,7 +146,10 @@ export default function BudgetPage() {
           </div>
         )}
         <div
-          className={cn(budgetRecords.length > 0 && "border-t border-dashed border-border/70")}
+          className={cn(
+            budgetRecords.length > 0 &&
+              "border-t border-dashed border-border/70",
+          )}
         >
           <AddCategoryForm
             walletName={walletName}
