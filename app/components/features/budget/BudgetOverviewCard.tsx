@@ -7,8 +7,6 @@ type BudgetOverviewCardProps = {
   walletName: string;
   budgetRecords: BudgetRecord[];
   totalBudget: number;
-  totalUsed: number;
-  totalUsagePercentage: number;
 };
 
 /**
@@ -25,8 +23,6 @@ export function BudgetOverviewCard({
   walletName,
   budgetRecords,
   totalBudget,
-  totalUsed,
-  totalUsagePercentage,
 }: BudgetOverviewCardProps) {
   const chartData = budgetRecords
     .filter((rec) => rec.amount > 0 && totalBudget > 0)
@@ -55,14 +51,6 @@ export function BudgetOverviewCard({
               ¥
             </span>
             {totalBudget.toLocaleString()}
-          </p>
-          <p className="mt-2 text-[11px] font-numeric tabular-nums text-muted-foreground">
-            <span className="text-muted-foreground/60 mr-1">使用</span>¥
-            {totalUsed.toLocaleString()}
-            <span className="text-muted-foreground/40 mx-1.5">·</span>
-            <span className="text-muted-foreground/80 font-medium">
-              {totalUsagePercentage}%
-            </span>
           </p>
         </div>
 

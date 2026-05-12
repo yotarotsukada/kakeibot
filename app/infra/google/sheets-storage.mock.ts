@@ -21,16 +21,6 @@ const SEED_WALLETS: Wallet[] = [
   { name: "結婚記念旅行", type: "特別", settled: true },
 ];
 
-const SEED_CATEGORIES: string[] = [
-  "食費",
-  "日用品費",
-  "交通費",
-  "外食費",
-  "医療費",
-  "娯楽費",
-  "通信費",
-];
-
 const SEED_BUDGETS: BudgetRecord[] = [
   { walletName: "2026-05通常", categoryName: "食費", amount: 50000 },
   { walletName: "2026-05通常", categoryName: "日用品費", amount: 30000 },
@@ -213,7 +203,6 @@ export class MockStorage implements Storage {
     ["U_MOCK_USER_B", "B"],
   ]);
   private wallets: Wallet[] = [...SEED_WALLETS];
-  private categories: string[] = [...SEED_CATEGORIES];
   private budgets: BudgetRecord[] = [...SEED_BUDGETS];
 
   async initialize(): Promise<void> {
@@ -301,10 +290,6 @@ export class MockStorage implements Storage {
       if (e.wallet === oldName) e.wallet = newName;
     }
     console.log(`[MockStorage] 💳 財布名変更: ${oldName} → ${newName}`);
-  }
-
-  async getCategories(): Promise<string[]> {
-    return this.categories;
   }
 
   async getLedgerEntriesByWallet(walletName: string): Promise<LedgerEntry[]> {

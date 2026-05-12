@@ -52,14 +52,14 @@ export function AddCategoryForm({
       <Input
         type="text"
         name="categoryName"
-        placeholder="あたらしいカテゴリ"
+        placeholder="新カテゴリ"
         required
         disabled={isPending}
         className="flex-1 bg-muted/40 placeholder:text-muted-foreground/60"
       />
       <MoneyInput
         name="amount"
-        placeholder="金額"
+        placeholder=""
         required
         disabled={isPending}
         wrapperClassName="w-28"

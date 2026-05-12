@@ -422,26 +422,6 @@ export class GoogleSheetsStorage implements Storage {
     }
   }
 
-  async getCategories(): Promise<string[]> {
-    try {
-      const token = await this.getAccessToken();
-      const range = `${SHEET_NAMES.CATEGORY_MASTER}!A:A`;
-      const url = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(range)}`;
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return [];
-      const data = (await res.json()) as { values?: string[][] };
-      if (!data.values) return [];
-      return data.values
-        .slice(1)
-        .map((row) => row[0])
-        .filter(Boolean);
-    } catch (err) {
-      throw new GoogleSheetsError("カテゴリマスタの取得に失敗しました", err);
-    }
-  }
-
   async getLedgerEntriesByWallet(walletName: string): Promise<LedgerEntry[]> {
     try {
       const token = await this.getAccessToken();

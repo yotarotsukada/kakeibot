@@ -10,7 +10,6 @@ export const SHEET_NAMES = {
   LEDGER: "元帳",
   USER_MASTER: "ユーザーマスタ",
   WALLET_MASTER: "財布マスタ",
-  CATEGORY_MASTER: "カテゴリマスタ",
   BUDGET: "予算記録",
 } as const;
 
@@ -28,7 +27,6 @@ export interface Storage {
   upsertWallet(wallet: Wallet): Promise<void>;
   renameWallet(oldName: string, newName: string): Promise<void>;
   setWalletSettled(walletName: string, settled: boolean): Promise<void>;
-  getCategories(): Promise<string[]>;
   getLedgerEntriesByWallet(walletName: string): Promise<LedgerEntry[]>;
   getLatestLedgerEntry(): Promise<{ walletName: string; date: string } | null>;
 }

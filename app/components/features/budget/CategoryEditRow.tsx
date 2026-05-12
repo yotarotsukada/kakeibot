@@ -10,7 +10,6 @@ type CategoryEditRowProps = {
   walletName: string;
   selectedMonth: string;
   color: string;
-  isUsed: boolean;
 };
 
 /**
@@ -26,7 +25,6 @@ export function CategoryEditRow({
   walletName,
   selectedMonth,
   color,
-  isUsed,
 }: CategoryEditRowProps) {
   const navigation = useNavigation();
 
@@ -72,9 +70,8 @@ export function CategoryEditRow({
           type="submit"
           variant="ghost"
           size="icon-sm"
-          disabled={isUsed || isDeletePending}
+          disabled={isDeletePending}
           aria-label={isDeletePending ? "削除中" : "削除"}
-          title={isUsed ? "明細が紐づいているため削除できません" : "削除"}
           className="rounded-full text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 disabled:text-muted-foreground/20 disabled:hover:bg-transparent"
         >
           {isDeletePending ? (
