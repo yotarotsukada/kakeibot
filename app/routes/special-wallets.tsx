@@ -414,7 +414,13 @@ function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
             </div>
           </>
         ) : (
-          <p className="text-sm text-muted-foreground/50 mt-1">予算未設定</p>
+          <>
+            <p className="text-[11px] text-muted-foreground/80 mb-1">予算未設定</p>
+            <p className="font-numeric text-[2.5rem] font-extrabold leading-none tracking-tight tabular-nums text-foreground">
+              <span className="text-2xl font-bold mr-0.5 align-baseline opacity-70">¥</span>
+              {totalUsed.toLocaleString()}
+            </p>
+          </>
         )}
       </div>
 

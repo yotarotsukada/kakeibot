@@ -61,7 +61,15 @@ export function WalletCard({
 
         {/* 予算未設定の特別財布: コンパクト表示 */}
         {!monthly && !hasBudget ? (
-          <p className="text-sm text-muted-foreground/50 mt-1">予算未設定</p>
+          <>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[11px] text-muted-foreground/80">予算未設定</p>
+            </div>
+            <p className="font-numeric text-[2.5rem] font-extrabold leading-none tracking-tight tabular-nums text-foreground">
+              <span className="text-2xl font-bold mr-0.5 align-baseline opacity-70">¥</span>
+              {totalUsed.toLocaleString()}
+            </p>
+          </>
         ) : (
           <>
             <div className="flex items-center justify-between mb-3">
