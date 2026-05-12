@@ -142,25 +142,20 @@ export function WalletCard({
   );
 }
 
-/** 予算カテゴリに紐付けられない支出をまとめる「その他」行。 */
+/** 予算カテゴリに紐付けられない支出をまとめる「未分類」行。 */
 function MiscRow({ usedAmount }: { usedAmount: number }) {
   return (
-    <div className="space-y-1.5 pt-1 border-t border-border/40">
-      <div className="flex items-baseline gap-2">
-        <span
-          className="size-2 rounded-full shrink-0 translate-y-[-1px] bg-foreground/20"
-          aria-hidden
-        />
-        <span className="text-sm text-foreground/60 font-medium flex-1">
-          その他
-        </span>
-        <span className="text-sm font-bold tabular-nums text-foreground/60">
-          <span className="font-sans text-[10px] font-medium opacity-70 mr-0.5">
-            計
-          </span>
-          <span className="font-numeric">¥{usedAmount.toLocaleString()}</span>
-        </span>
-      </div>
+    <div className="flex items-baseline gap-2">
+      <span
+        className="size-2 rounded-full shrink-0 translate-y-[-1px] bg-foreground/20"
+        aria-hidden
+      />
+      <span className="text-sm text-foreground/60 font-medium flex-1">
+        未分類
+      </span>
+      <span className="font-numeric text-sm font-bold tabular-nums text-foreground/60">
+        ¥{usedAmount.toLocaleString()}
+      </span>
     </div>
   );
 }
