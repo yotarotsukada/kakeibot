@@ -45,6 +45,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   ]);
 
   const categories = budgetRecords.map((b) => b.categoryName);
+  const specialWalletNames = wallets
+    .filter((w) => w.type === "特別")
+    .map((w) => w.name);
   const unsettledSpecialWallets = wallets
     .filter((w) => w.type === "特別" && !w.settled)
     .map((w) => w.name);
@@ -52,6 +55,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   return {
     entries,
     categories,
+    specialWalletNames,
     unsettledSpecialWallets,
     monthlyWalletName,
     selectedMonth,
@@ -110,10 +114,12 @@ type AttributionValue = `CATEGORY:${string}` | `WALLET:${string}`;
 
 function encodeAttribution(
   entry: LedgerEntryWithId,
-  monthlyWalletName: string,
+  specialWalletNames: string[],
   categories: string[],
 ): AttributionValue {
-  if (entry.wallet !== monthlyWalletName) {
+  // 財布マスタの type="特別" と照合して特別財布かどうか判定する。
+  // entry.wallet !== monthlyWalletName だと過去月の月次財布も特別扱いになるためNGo
+  if (specialWalletNames.includes(entry.wallet)) {
     return `WALLET:${entry.wallet}`;
   }
   return `CATEGORY:${categories.includes(entry.category) ? entry.category : ""}`;
@@ -140,12 +146,14 @@ function EntryRow({
   entry,
   categories,
   colorMap,
+  specialWalletNames,
   unsettledSpecialWallets,
   monthlyWalletName,
 }: {
   entry: LedgerEntryWithId;
   categories: string[];
   colorMap: Map<string, string>;
+  specialWalletNames: string[];
   unsettledSpecialWallets: string[];
   monthlyWalletName: string;
 }) {
@@ -153,19 +161,19 @@ function EntryRow({
   const actionData = fetcher.data as ActionError | null | undefined;
   useActionErrorToast(actionData);
 
-  const currentAttribution = encodeAttribution(entry, monthlyWalletName, categories);
+  const currentAttribution = encodeAttribution(entry, specialWalletNames, categories);
   const optimisticAttribution = useMemo(() => {
     const fd = fetcher.formData;
     if (!fd) return currentAttribution;
     const w = fd.get("walletName") as string | null;
     const c = fd.get("categoryName") as string | null;
     if (w && c !== null) {
-      return w !== monthlyWalletName
+      return specialWalletNames.includes(w)
         ? (`WALLET:${w}` as AttributionValue)
         : (`CATEGORY:${c}` as AttributionValue);
     }
     return currentAttribution;
-  }, [fetcher.formData, currentAttribution, monthlyWalletName]);
+  }, [fetcher.formData, currentAttribution, specialWalletNames]);
 
   const isPending = fetcher.state !== "idle";
   const isSpecialWallet = optimisticAttribution.startsWith("WALLET:");
@@ -173,6 +181,14 @@ function EntryRow({
     ? ""
     : optimisticAttribution.slice("CATEGORY:".length);
   const dotColor = colorMap.get(optimisticCategory) ?? UNCATEGORIZED_COLOR;
+
+  // 現在の財布が精算済みで選択肢にない場合、disabled option として補完する
+  const currentWalletName = optimisticAttribution.startsWith("WALLET:")
+    ? optimisticAttribution.slice("WALLET:".length)
+    : null;
+  const needsSettledOption =
+    currentWalletName !== null &&
+    !unsettledSpecialWallets.includes(currentWalletName);
 
   return (
     <div className="bg-background rounded-2xl px-4 py-3 flex items-start gap-3 border border-border/30 shadow-[0_1px_4px_-2px_oklch(0.30_0.02_30_/_0.08)]">
@@ -220,15 +236,18 @@ function EntryRow({
               ))}
               <option value="CATEGORY:">未分類</option>
             </optgroup>
-            {unsettledSpecialWallets.length > 0 && (
-              <optgroup label="特別財布">
-                {unsettledSpecialWallets.map((name) => (
-                  <option key={name} value={`WALLET:${name}`}>
-                    {name}
-                  </option>
-                ))}
-              </optgroup>
-            )}
+            <optgroup label="特別財布">
+              {unsettledSpecialWallets.map((name) => (
+                <option key={name} value={`WALLET:${name}`}>
+                  {name}
+                </option>
+              ))}
+              {needsSettledOption && (
+                <option value={`WALLET:${currentWalletName}`} disabled>
+                  {currentWalletName}（精算済み）
+                </option>
+              )}
+            </optgroup>
           </select>
         </div>
         {entry.memo && (
@@ -252,6 +271,7 @@ function DayDetailPanel({
   date,
   entries,
   categories,
+  specialWalletNames,
   unsettledSpecialWallets,
   monthlyWalletName,
   onClose,
@@ -259,6 +279,7 @@ function DayDetailPanel({
   date: string;
   entries: LedgerEntryWithId[];
   categories: string[];
+  specialWalletNames: string[];
   unsettledSpecialWallets: string[];
   monthlyWalletName: string;
   onClose: () => void;
@@ -333,6 +354,7 @@ function DayDetailPanel({
                 entry={entry}
                 categories={categories}
                 colorMap={colorMap}
+                specialWalletNames={specialWalletNames}
                 unsettledSpecialWallets={unsettledSpecialWallets}
                 monthlyWalletName={monthlyWalletName}
               />
@@ -350,6 +372,7 @@ export default function CalendarPage() {
   const {
     entries,
     categories,
+    specialWalletNames,
     unsettledSpecialWallets,
     monthlyWalletName,
     selectedMonth,
@@ -420,6 +443,7 @@ export default function CalendarPage() {
           date={selectedDate}
           entries={selectedEntries}
           categories={categories}
+          specialWalletNames={specialWalletNames}
           unsettledSpecialWallets={unsettledSpecialWallets}
           monthlyWalletName={monthlyWalletName}
           onClose={() => setSelectedDate(null)}
