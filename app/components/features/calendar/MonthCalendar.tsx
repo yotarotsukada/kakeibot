@@ -93,7 +93,6 @@ export function MonthCalendar({
           const isToday = cell.dateStr === todayStr;
           const isPast = cell.dateStr < todayStr;
           const isSavingDay = isPast && total === undefined;
-          const catVariant = (((cell.date - 1) % 5) + 1) as 1 | 2 | 3 | 4 | 5;
           const isSun = cell.colIdx === 0;
           const isSat = cell.colIdx === 6;
 
@@ -138,11 +137,7 @@ export function MonthCalendar({
 
               {/* 節約おめでとう猫アイコン（前日以前で出費なし） */}
               {isSavingDay && (
-                <CatSavingsIcon
-                  variant={catVariant}
-                  size={16}
-                  className="text-primary/70"
-                />
+                <CatSavingsIcon size={16} className="text-primary/70" />
               )}
             </button>
           );
