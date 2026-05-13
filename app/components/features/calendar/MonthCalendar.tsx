@@ -1,4 +1,5 @@
 import { cn } from "~/lib/utils";
+import { CatSavingsIcon } from "./CatSavingsIcon";
 
 const DAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
 
@@ -90,6 +91,8 @@ export function MonthCalendar({
           const total = dailyTotals[cell.dateStr];
           const isSelected = cell.dateStr === selectedDate;
           const isToday = cell.dateStr === todayStr;
+          const isPast = cell.dateStr < todayStr;
+          const isSavingDay = isPast && total === undefined;
           const isSun = cell.colIdx === 0;
           const isSat = cell.colIdx === 6;
 
@@ -99,7 +102,7 @@ export function MonthCalendar({
               type="button"
               onClick={() => onDateSelect(cell.dateStr)}
               className={cn(
-                "h-[60px] flex flex-col items-center pt-1 gap-0",
+                "h-[60px] flex flex-col items-center pt-1.5 gap-0.5",
                 "border-b border-r border-border/20",
                 "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
                 isSelected
@@ -125,12 +128,17 @@ export function MonthCalendar({
                 {cell.date}
               </span>
 
-              {/* 支出合計（存在する日のみ） */}
-              {total !== undefined && (
-                <span className="text-[9px] font-bold font-numeric tabular-nums leading-none text-primary/75">
-                  {formatCellAmount(total)}
-                </span>
-              )}
+              {/* 金額 or 猫アイコン — 高さを h-4 に固定して両者の重心を揃える */}
+              <div className="h-4 flex items-center justify-center">
+                {total !== undefined && (
+                  <span className="text-[9px] font-bold font-numeric tabular-nums leading-none text-primary/75">
+                    {formatCellAmount(total)}
+                  </span>
+                )}
+                {isSavingDay && (
+                  <CatSavingsIcon size={13} className="text-primary/70 -mt-1" />
+                )}
+              </div>
             </button>
           );
         })}
