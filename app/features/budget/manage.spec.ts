@@ -5,7 +5,7 @@ import {
   getBudgetPageData,
   upsertBudget,
 } from "~/features/budget/manage";
-import { createTestStorage } from "../helpers/storage";
+import { createTestStorage } from "../../../test/helpers/storage";
 
 describe("upsertBudget", () => {
   it("空のカテゴリ名は ValidationError を返す", async () => {

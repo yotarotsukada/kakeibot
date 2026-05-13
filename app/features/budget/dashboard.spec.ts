@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getDashboardData } from "~/features/budget/dashboard";
-import { createTestStorage } from "../helpers/storage";
+import { createTestStorage } from "../../../test/helpers/storage";
 
 const MONTH = "2026-01";
 const WALLET = `${MONTH}通常`;

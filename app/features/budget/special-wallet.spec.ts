@@ -5,7 +5,7 @@ import {
   renameSpecialWallet,
   toggleWalletSettled,
 } from "~/features/budget/special-wallet";
-import { createTestStorage } from "../helpers/storage";
+import { createTestStorage } from "../../../test/helpers/storage";
 
 describe("createSpecialWallet", () => {
   it("空の財布名は ValidationError を返す", async () => {
