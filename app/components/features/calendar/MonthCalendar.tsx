@@ -102,7 +102,7 @@ export function MonthCalendar({
               type="button"
               onClick={() => onDateSelect(cell.dateStr)}
               className={cn(
-                "h-[60px] flex flex-col items-center pt-1.5 gap-0.5",
+                "h-[60px] flex flex-col items-center pt-1.5 gap-1",
                 "border-b border-r border-border/20",
                 "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
                 isSelected
@@ -128,17 +128,17 @@ export function MonthCalendar({
                 {cell.date}
               </span>
 
-              {/* 支出合計（存在する日のみ） */}
-              {total !== undefined && (
-                <span className="text-[9px] font-bold font-numeric tabular-nums leading-none text-primary/75">
-                  {formatCellAmount(total)}
-                </span>
-              )}
-
-              {/* 節約おめでとう猫アイコン（前日以前で出費なし） */}
-              {isSavingDay && (
-                <CatSavingsIcon size={16} className="text-primary/70" />
-              )}
+              {/* 金額 or 猫アイコン — 高さを h-4 に固定して両者の重心を揃える */}
+              <div className="h-4 flex items-center justify-center">
+                {total !== undefined && (
+                  <span className="text-[9px] font-bold font-numeric tabular-nums leading-none text-primary/75">
+                    {formatCellAmount(total)}
+                  </span>
+                )}
+                {isSavingDay && (
+                  <CatSavingsIcon size={13} className="text-primary/70" />
+                )}
+              </div>
             </button>
           );
         })}
