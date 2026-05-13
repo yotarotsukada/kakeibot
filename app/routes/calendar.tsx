@@ -114,13 +114,16 @@ type AttributionValue = `CATEGORY:${string}` | `WALLET:${string}`;
 
 function encodeAttribution(
   entry: LedgerEntryWithId,
+  monthlyWalletName: string,
   specialWalletNames: string[],
   categories: string[],
 ): AttributionValue {
-  // 財布マスタの type="特別" と照合して特別財布かどうか判定する。
-  // entry.wallet !== monthlyWalletName だと過去月の月次財布も特別扱いになるためNGo
   if (specialWalletNames.includes(entry.wallet)) {
     return `WALLET:${entry.wallet}`;
+  }
+  // 月次財布でも特別財布でもない場合: タイプミス等の未知財布 → 未分類として表示
+  if (entry.wallet !== monthlyWalletName) {
+    return "CATEGORY:";
   }
   return `CATEGORY:${categories.includes(entry.category) ? entry.category : ""}`;
 }
@@ -161,7 +164,7 @@ function EntryRow({
   const actionData = fetcher.data as ActionError | null | undefined;
   useActionErrorToast(actionData);
 
-  const currentAttribution = encodeAttribution(entry, specialWalletNames, categories);
+  const currentAttribution = encodeAttribution(entry, monthlyWalletName, specialWalletNames, categories);
   const optimisticAttribution = useMemo(() => {
     const fd = fetcher.formData;
     if (!fd) return currentAttribution;
