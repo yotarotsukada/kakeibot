@@ -136,7 +136,7 @@ export function MonthCalendar({
                   </span>
                 )}
                 {isSavingDay && (
-                  <CatSavingsIcon size={13} className="text-primary/70" />
+                  <CatSavingsIcon size={13} className="text-primary/70 -mt-1" />
                 )}
               </div>
             </button>
