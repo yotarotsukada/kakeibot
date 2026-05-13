@@ -525,6 +525,91 @@ export class GoogleSheetsStorage implements Storage {
     }
   }
 
+  async getLedgerEntriesByMonth(
+    yearMonth: string,
+  ): Promise<LedgerEntryWithId[]> {
+    try {
+      const token = await this.getAccessToken();
+      const range = `${SHEET_NAMES.LEDGER}!A:I`;
+      const url = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(range)}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return [];
+      const data = (await res.json()) as { values?: string[][] };
+      if (!data.values) return [];
+      return data.values
+        .slice(1)
+        .filter((row) => row[1]?.startsWith(yearMonth))
+        .map((row) => ({
+          id: row[0],
+          date: row[1],
+          type: row[2] as "入金" | "支出",
+          amount: Number(row[3]) || 0,
+          actor: row[4],
+          category: row[5],
+          wallet: row[6],
+          shouldSettle: row[7] === "TRUE",
+          memo: row[8] ?? "",
+        }));
+    } catch (err) {
+      throw new GoogleSheetsError("元帳の取得に失敗しました", err);
+    }
+  }
+
+  async updateLedgerEntryAttribution(
+    entryId: string,
+    walletName: string,
+    categoryName: string,
+  ): Promise<void> {
+    try {
+      const token = await this.getAccessToken();
+      const idsRange = `${SHEET_NAMES.LEDGER}!A:A`;
+      const url = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(idsRange)}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`Sheets read failed: ${res.status}`);
+      const data = (await res.json()) as { values?: string[][] };
+      const rows = data.values ?? [];
+      const rowIdx = rows.findIndex((row) => row[0] === entryId);
+      if (rowIdx === -1)
+        throw new Error(`元帳エントリが見つかりません: ${entryId}`);
+
+      const n = rowIdx + 1;
+      const batchUrl = `${SHEETS_BASE}/${this.spreadsheetId}/values:batchUpdate`;
+      const batchRes = await fetch(batchUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          valueInputOption: "USER_ENTERED",
+          data: [
+            {
+              range: `${SHEET_NAMES.LEDGER}!F${n}`,
+              majorDimension: "ROWS",
+              values: [[categoryName]],
+            },
+            {
+              range: `${SHEET_NAMES.LEDGER}!G${n}`,
+              majorDimension: "ROWS",
+              values: [[walletName]],
+            },
+          ],
+        }),
+      });
+      if (!batchRes.ok)
+        throw new Error(
+          `Sheets batch update failed: ${batchRes.status} ${await batchRes.text()}`,
+        );
+    } catch (err) {
+      if (err instanceof GoogleSheetsError) throw err;
+      throw new GoogleSheetsError("アトリビューションの更新に失敗しました", err);
+    }
+  }
+
   async findActorByLineUserId(lineUserId: string): Promise<string | null> {
     try {
       const token = await this.getAccessToken();

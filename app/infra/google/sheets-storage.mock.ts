@@ -117,10 +117,21 @@ const SEED_LEDGER: StoredEntry[] = [
     type: "支出",
     amount: 80000,
     actor: "A",
-    category: "旅費",
+    category: "一括",
     wallet: "沖縄旅行",
     shouldSettle: true,
     memo: "航空券2名分",
+  },
+  {
+    transactionId: "seed-014",
+    date: "2026-05-07",
+    type: "支出",
+    amount: 35000,
+    actor: "B",
+    category: "一括",
+    wallet: "沖縄旅行",
+    shouldSettle: true,
+    memo: "ホテル代",
   },
   // 新居家具（未精算の特別財布）
   {
@@ -129,7 +140,7 @@ const SEED_LEDGER: StoredEntry[] = [
     type: "支出",
     amount: 60000,
     actor: "A",
-    category: "家具",
+    category: "一括",
     wallet: "新居家具",
     shouldSettle: true,
     memo: "ソファ",
@@ -140,7 +151,7 @@ const SEED_LEDGER: StoredEntry[] = [
     type: "支出",
     amount: 45000,
     actor: "B",
-    category: "家電",
+    category: "一括",
     wallet: "新居家具",
     shouldSettle: true,
     memo: "洗濯機",
@@ -152,7 +163,7 @@ const SEED_LEDGER: StoredEntry[] = [
     type: "支出",
     amount: 110000,
     actor: "A",
-    category: "旅費",
+    category: "一括",
     wallet: "結婚記念旅行",
     shouldSettle: true,
     memo: "京都温泉旅館",
@@ -302,6 +313,14 @@ export class MockStorage implements Storage {
       .map(({ transactionId, ...entry }) => ({ id: transactionId, ...entry }));
   }
 
+  async getLedgerEntriesByMonth(
+    yearMonth: string,
+  ): Promise<LedgerEntryWithId[]> {
+    return this.ledger
+      .filter((e) => e.date.startsWith(yearMonth))
+      .map(({ transactionId, ...entry }) => ({ id: transactionId, ...entry }));
+  }
+
   async updateLedgerEntryCategory(
     entryId: string,
     categoryName: string,
@@ -311,6 +330,21 @@ export class MockStorage implements Storage {
       entry.category = categoryName;
       console.log(
         `[MockStorage] ✏️  カテゴリ更新: ${entryId} → ${categoryName}`,
+      );
+    }
+  }
+
+  async updateLedgerEntryAttribution(
+    entryId: string,
+    walletName: string,
+    categoryName: string,
+  ): Promise<void> {
+    const entry = this.ledger.find((e) => e.transactionId === entryId);
+    if (entry) {
+      entry.wallet = walletName;
+      entry.category = categoryName;
+      console.log(
+        `[MockStorage] ✏️  アトリビューション更新: ${entryId} → wallet=${walletName}, category=${categoryName}`,
       );
     }
   }

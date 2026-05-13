@@ -32,8 +32,14 @@ export interface Storage {
   getLedgerEntriesByWallet(walletName: string): Promise<LedgerEntry[]>;
   getLatestLedgerEntry(): Promise<{ walletName: string; date: string } | null>;
   getLedgerEntriesForCalendar(walletName: string): Promise<LedgerEntryWithId[]>;
+  getLedgerEntriesByMonth(yearMonth: string): Promise<LedgerEntryWithId[]>;
   updateLedgerEntryCategory(
     entryId: string,
+    categoryName: string,
+  ): Promise<void>;
+  updateLedgerEntryAttribution(
+    entryId: string,
+    walletName: string,
     categoryName: string,
   ): Promise<void>;
 }

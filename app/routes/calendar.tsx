@@ -37,15 +37,26 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     ? rawMonth
     : currentMonth;
 
-  const walletName = `${selectedMonth}通常`;
-  const [entries, budgetRecords] = await Promise.all([
-    storage.getLedgerEntriesForCalendar(walletName),
-    storage.getBudgetRecords(walletName),
+  const monthlyWalletName = `${selectedMonth}通常`;
+  const [entries, budgetRecords, wallets] = await Promise.all([
+    storage.getLedgerEntriesByMonth(selectedMonth),
+    storage.getBudgetRecords(monthlyWalletName),
+    storage.getWallets(),
   ]);
 
   const categories = budgetRecords.map((b) => b.categoryName);
+  const unsettledSpecialWallets = wallets
+    .filter((w) => w.type === "特別" && !w.settled)
+    .map((w) => w.name);
 
-  return { entries, categories, selectedMonth, monthRange };
+  return {
+    entries,
+    categories,
+    unsettledSpecialWallets,
+    monthlyWalletName,
+    selectedMonth,
+    monthRange,
+  };
 }
 
 export async function action({
@@ -57,8 +68,8 @@ export async function action({
   const storage = createStorage(env);
 
   const formData = await request.formData();
+  const intent = String(formData.get("intent") ?? "");
   const entryId = String(formData.get("entryId") ?? "");
-  const categoryName = String(formData.get("categoryName") ?? "");
 
   if (!entryId) {
     return actionError(
@@ -69,6 +80,20 @@ export async function action({
     );
   }
 
+  if (intent === "updateAttribution") {
+    const walletName = String(formData.get("walletName") ?? "");
+    const categoryName = String(formData.get("categoryName") ?? "");
+    try {
+      await storage.updateLedgerEntryAttribution(entryId, walletName, categoryName);
+      return null;
+    } catch (e) {
+      const wrapped = e instanceof GoogleSheetsError ? e : wrapUnknownError(e);
+      return actionError(wrapped);
+    }
+  }
+
+  // 後方互換: カテゴリのみ更新
+  const categoryName = String(formData.get("categoryName") ?? "");
   try {
     await storage.updateLedgerEntryCategory(entryId, categoryName);
     return null;
@@ -78,65 +103,132 @@ export async function action({
   }
 }
 
+// ---- アトリビューションのエンコード/デコード --------------------------------
+
+// select の value は "CATEGORY:食費" / "WALLET:沖縄旅行" 形式
+type AttributionValue = `CATEGORY:${string}` | `WALLET:${string}`;
+
+function encodeAttribution(
+  entry: LedgerEntryWithId,
+  monthlyWalletName: string,
+  categories: string[],
+): AttributionValue {
+  if (entry.wallet !== monthlyWalletName) {
+    return `WALLET:${entry.wallet}`;
+  }
+  return `CATEGORY:${categories.includes(entry.category) ? entry.category : ""}`;
+}
+
+function decodeAttribution(
+  value: string,
+  monthlyWalletName: string,
+): { walletName: string; categoryName: string } {
+  const colonIdx = value.indexOf(":");
+  const type = value.slice(0, colonIdx);
+  const name = value.slice(colonIdx + 1);
+  if (type === "WALLET") {
+    return { walletName: name, categoryName: "一括" };
+  }
+  return { walletName: monthlyWalletName, categoryName: name };
+}
+
 // ---- カテゴリ選択行 --------------------------------------------------------
 
-const UNCATEGORIZED = "未分類";
-// 予算カテゴリにないエントリのドット色（ニュートラルグレー）
 const UNCATEGORIZED_COLOR = "oklch(0.72 0 0)";
 
 function EntryRow({
   entry,
   categories,
   colorMap,
+  unsettledSpecialWallets,
+  monthlyWalletName,
 }: {
   entry: LedgerEntryWithId;
   categories: string[];
   colorMap: Map<string, string>;
+  unsettledSpecialWallets: string[];
+  monthlyWalletName: string;
 }) {
   const fetcher = useFetcher<typeof action>();
   const actionData = fetcher.data as ActionError | null | undefined;
   useActionErrorToast(actionData);
 
-  // 予算カテゴリにない場合は空文字（未分類 option の value と一致させる）
-  const resolvedCategory = categories.includes(entry.category)
-    ? entry.category
-    : "";
-  const optimisticCategory =
-    (fetcher.formData?.get("categoryName") as string | null) ??
-    resolvedCategory;
-  const isPending = fetcher.state !== "idle";
+  const currentAttribution = encodeAttribution(entry, monthlyWalletName, categories);
+  const optimisticAttribution = useMemo(() => {
+    const fd = fetcher.formData;
+    if (!fd) return currentAttribution;
+    const w = fd.get("walletName") as string | null;
+    const c = fd.get("categoryName") as string | null;
+    if (w && c !== null) {
+      return w !== monthlyWalletName
+        ? (`WALLET:${w}` as AttributionValue)
+        : (`CATEGORY:${c}` as AttributionValue);
+    }
+    return currentAttribution;
+  }, [fetcher.formData, currentAttribution, monthlyWalletName]);
 
+  const isPending = fetcher.state !== "idle";
+  const isSpecialWallet = optimisticAttribution.startsWith("WALLET:");
+  const optimisticCategory = isSpecialWallet
+    ? ""
+    : optimisticAttribution.slice("CATEGORY:".length);
   const dotColor = colorMap.get(optimisticCategory) ?? UNCATEGORIZED_COLOR;
 
   return (
     <div className="bg-background rounded-2xl px-4 py-3 flex items-start gap-3 border border-border/30 shadow-[0_1px_4px_-2px_oklch(0.30_0.02_30_/_0.08)]">
-      {/* カテゴリドット＋セレクト＋メモ */}
+      {/* アトリビューションドット＋セレクト＋メモ */}
       <div className="flex-1 min-w-0 space-y-1.5">
         <div className="flex items-center gap-2">
-          <span
-            className="size-2 rounded-full shrink-0 mt-px"
-            style={{ backgroundColor: dotColor }}
-            aria-hidden
-          />
+          {isSpecialWallet ? (
+            <span
+              className="size-2 rounded-full shrink-0 mt-px border border-foreground/40 bg-background"
+              aria-hidden
+            />
+          ) : (
+            <span
+              className="size-2 rounded-full shrink-0 mt-px"
+              style={{ backgroundColor: dotColor }}
+              aria-hidden
+            />
+          )}
           <select
-            key={optimisticCategory}
-            defaultValue={optimisticCategory}
+            key={optimisticAttribution}
+            defaultValue={optimisticAttribution}
             disabled={isPending}
             onChange={(e) => {
+              const { walletName, categoryName } = decodeAttribution(
+                e.target.value,
+                monthlyWalletName,
+              );
               fetcher.submit(
-                { entryId: entry.id, categoryName: e.target.value },
+                {
+                  intent: "updateAttribution",
+                  entryId: entry.id,
+                  walletName,
+                  categoryName,
+                },
                 { method: "post", action: "/calendar" },
               );
             }}
             className="text-[13px] font-medium rounded-lg border border-border/40 bg-muted px-2 py-0.5 text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
           >
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-            {/* value="" で空文字をシートに書き込み、既存の未分類集計ロジックと整合させる */}
-            <option value="">{UNCATEGORIZED}</option>
+            <optgroup label="月次カテゴリ">
+              {categories.map((cat) => (
+                <option key={cat} value={`CATEGORY:${cat}`}>
+                  {cat}
+                </option>
+              ))}
+              <option value="CATEGORY:">未分類</option>
+            </optgroup>
+            {unsettledSpecialWallets.length > 0 && (
+              <optgroup label="特別財布">
+                {unsettledSpecialWallets.map((name) => (
+                  <option key={name} value={`WALLET:${name}`}>
+                    {name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
         </div>
         {entry.memo && (
@@ -160,11 +252,15 @@ function DayDetailPanel({
   date,
   entries,
   categories,
+  unsettledSpecialWallets,
+  monthlyWalletName,
   onClose,
 }: {
   date: string;
   entries: LedgerEntryWithId[];
   categories: string[];
+  unsettledSpecialWallets: string[];
+  monthlyWalletName: string;
   onClose: () => void;
 }) {
   const [visible, setVisible] = useState(false);
@@ -237,6 +333,8 @@ function DayDetailPanel({
                 entry={entry}
                 categories={categories}
                 colorMap={colorMap}
+                unsettledSpecialWallets={unsettledSpecialWallets}
+                monthlyWalletName={monthlyWalletName}
               />
             ))
           )}
@@ -249,8 +347,14 @@ function DayDetailPanel({
 // ---- ページ本体 -----------------------------------------------------------
 
 export default function CalendarPage() {
-  const { entries, categories, selectedMonth, monthRange } =
-    useLoaderData<typeof loader>();
+  const {
+    entries,
+    categories,
+    unsettledSpecialWallets,
+    monthlyWalletName,
+    selectedMonth,
+    monthRange,
+  } = useLoaderData<typeof loader>();
 
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
@@ -261,7 +365,7 @@ export default function CalendarPage() {
 
   const [year, month] = selectedMonth.split("-").map(Number);
 
-  // 日別支出合計マップ
+  // 日別支出合計マップ（全財布の明細を含む）
   const dailyTotals = useMemo(() => {
     const map: Record<string, number> = {};
     for (const e of entries) {
@@ -273,7 +377,6 @@ export default function CalendarPage() {
   }, [entries]);
 
   // 月ナビゲーション時のみパネルを閉じる。
-  // カテゴリ更新による entries 再ロードでは selectedMonth は変わらないためパネルは維持される。
   // biome-ignore lint/correctness/useExhaustiveDependencies: selectedMonth が変化したときだけ実行したい（effect 内部では参照しないが trigger として使用）
   useEffect(() => {
     setSelectedDate(null);
@@ -317,6 +420,8 @@ export default function CalendarPage() {
           date={selectedDate}
           entries={selectedEntries}
           categories={categories}
+          unsettledSpecialWallets={unsettledSpecialWallets}
+          monthlyWalletName={monthlyWalletName}
           onClose={() => setSelectedDate(null)}
         />
       )}
