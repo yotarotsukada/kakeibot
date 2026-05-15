@@ -33,7 +33,7 @@ import { cn } from "~/lib/utils";
 import type { Route } from "./+types/budget";
 
 export function meta(_args: Route.MetaArgs) {
-  return [{ title: "予算" }];
+  return [{ title: "ふたりの家計簿 | 予算" }];
 }
 
 export async function loader({ request, context }: Route.LoaderArgs) {
