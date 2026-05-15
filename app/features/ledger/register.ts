@@ -42,11 +42,12 @@ async function processMessage(
   { lineClient, parser, storage }: LedgerDeps,
 ): Promise<void> {
   try {
-    // 1. ユーザーマスタからアクター名を解決
-    const actor = await storage.findActorByLineUserId(msg.userId);
-    if (!actor) {
+    // 1. ユーザーマスタで存在確認（認証）。元帳に書き込む actor は共同に統一する
+    const registeredActor = await storage.findActorByLineUserId(msg.userId);
+    if (!registeredActor) {
       throw new UnknownUserError(msg.userId);
     }
+    const actor = "共同";
 
     // 2. 画像取得（画像メッセージの場合）
     let imageBase64: string | undefined;

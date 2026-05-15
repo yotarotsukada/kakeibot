@@ -165,6 +165,122 @@ describe("getDashboardData", () => {
     expect(names[2]).toBe("財布D");
   });
 
+  it("ユーザーマスタが空のとき settlements は空配列", async () => {
+    const storage = createTestStorage({
+      wallets: [{ name: WALLET, type: "月次", settled: false }],
+      budgets: [{ walletName: WALLET, categoryName: "食費", amount: 80000 }],
+      ledger: [],
+    });
+
+    const result = await getDashboardData({ storage, selectedMonth: MONTH });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.settlements).toHaveLength(0);
+  });
+
+  it("精算額が正しく計算される（2ユーザー・均等予算）", async () => {
+    const storage = createTestStorage({
+      wallets: [{ name: WALLET, type: "月次", settled: false }],
+      budgets: [{ walletName: WALLET, categoryName: "食費", amount: 80000 }],
+      ledger: [
+        { id: "1", date: "2026-01-05", type: "支出", amount: 30000, actor: "A", category: "食費", wallet: WALLET, shouldSettle: true, memo: "" },
+        { id: "2", date: "2026-01-10", type: "支出", amount: 5000,  actor: "B", category: "食費", wallet: WALLET, shouldSettle: true, memo: "" },
+      ],
+      users: { "U_A": "A", "U_B": "B" },
+    });
+
+    const result = await getDashboardData({ storage, selectedMonth: MONTH });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const { settlements } = result.value;
+    expect(settlements).toHaveLength(2);
+
+    const a = settlements.find((s) => s.userName === "A")!;
+    expect(a.advancedAmount).toBe(30000);
+    expect(a.transferAmount).toBe(40000 - 30000); // 10000
+
+    const b = settlements.find((s) => s.userName === "B")!;
+    expect(b.advancedAmount).toBe(5000);
+    expect(b.transferAmount).toBe(40000 - 5000); // 35000
+  });
+
+  it("予算ゼロのとき transferAmount = -advancedAmount", async () => {
+    const storage = createTestStorage({
+      wallets: [{ name: WALLET, type: "月次", settled: false }],
+      budgets: [],
+      ledger: [
+        { id: "1", date: "2026-01-05", type: "支出", amount: 15000, actor: "A", category: "食費", wallet: WALLET, shouldSettle: true, memo: "" },
+      ],
+      users: { "U_A": "A", "U_B": "B" },
+    });
+
+    const result = await getDashboardData({ storage, selectedMonth: MONTH });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const a = result.value.settlements.find((s) => s.userName === "A")!;
+    expect(a.advancedAmount).toBe(15000);
+    expect(a.transferAmount).toBe(-15000);
+  });
+
+  it("shouldSettle=false のエントリは立替額に含まれない", async () => {
+    const storage = createTestStorage({
+      wallets: [{ name: WALLET, type: "月次", settled: false }],
+      budgets: [{ walletName: WALLET, categoryName: "食費", amount: 60000 }],
+      ledger: [
+        { id: "1", date: "2026-01-05", type: "支出", amount: 20000, actor: "A", category: "食費", wallet: WALLET, shouldSettle: true,  memo: "" },
+        { id: "2", date: "2026-01-06", type: "支出", amount: 10000, actor: "A", category: "食費", wallet: WALLET, shouldSettle: false, memo: "" },
+      ],
+      users: { "U_A": "A", "U_B": "B" },
+    });
+
+    const result = await getDashboardData({ storage, selectedMonth: MONTH });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const a = result.value.settlements.find((s) => s.userName === "A")!;
+    expect(a.advancedAmount).toBe(20000);
+  });
+
+  it("actor=共同 のエントリは立替額に含まれない", async () => {
+    const storage = createTestStorage({
+      wallets: [{ name: WALLET, type: "月次", settled: false }],
+      budgets: [{ walletName: WALLET, categoryName: "食費", amount: 100000 }],
+      ledger: [
+        { id: "1", date: "2026-01-05", type: "支出", amount: 40000, actor: "共同", category: "食費", wallet: WALLET, shouldSettle: true, memo: "" },
+      ],
+      users: { "U_A": "A", "U_B": "B" },
+    });
+
+    const result = await getDashboardData({ storage, selectedMonth: MONTH });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const a = result.value.settlements.find((s) => s.userName === "A")!;
+    expect(a.advancedAmount).toBe(0);
+    expect(a.transferAmount).toBe(50000); // 各自の分担額: 100000/2=50000
+  });
+
+  it("予算が割り切れないとき最後のユーザーが端数を負担する", async () => {
+    const storage = createTestStorage({
+      wallets: [{ name: WALLET, type: "月次", settled: false }],
+      budgets: [{ walletName: WALLET, categoryName: "食費", amount: 100001 }],
+      ledger: [],
+      users: { "U_A": "A", "U_B": "B" },
+    });
+
+    const result = await getDashboardData({ storage, selectedMonth: MONTH });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const [a, b] = result.value.settlements;
+    // floor(100001/2)=50000, remainder=1 → 最後のユーザー: 50001
+    expect(a.transferAmount).toBe(50000);
+    expect(b.transferAmount).toBe(50001);
+  });
+
   it("精算済みの特別財布は recentWalletSummaries に含まれない", async () => {
     const storage = createTestStorage({
       wallets: [

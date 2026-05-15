@@ -6,6 +6,11 @@
 import type { BudgetRecord, Wallet } from "~/domain/budget/budget";
 import type { LedgerEntry } from "~/domain/ledger/entry";
 
+export type User = {
+  lineUserId: string;
+  name: string;
+};
+
 export const SHEET_NAMES = {
   LEDGER: "元帳",
   USER_MASTER: "ユーザーマスタ",
@@ -42,4 +47,5 @@ export interface Storage {
     walletName: string,
     categoryName: string,
   ): Promise<void>;
+  getUsers(): Promise<User[]>;
 }
