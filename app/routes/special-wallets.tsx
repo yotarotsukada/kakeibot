@@ -104,8 +104,6 @@ export async function action({
         }),
       );
     }
-    // 旧カテゴリ名 "__special__" で保存されたレコードをマイグレーション
-    await deleteBudget(walletName, "__special__", { storage });
     // 0 を保存 = 予算を未設定に戻す
     if (amount === 0) {
       const result = await deleteBudget(walletName, "一括", { storage });
