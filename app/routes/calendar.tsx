@@ -38,10 +38,11 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     : currentMonth;
 
   const monthlyWalletName = `${selectedMonth}通常`;
-  const [entries, budgetRecords, wallets] = await Promise.all([
+  const [entries, budgetRecords, wallets, users] = await Promise.all([
     storage.getLedgerEntriesByMonth(selectedMonth),
     storage.getBudgetRecords(monthlyWalletName),
     storage.getWallets(),
+    storage.getUsers(),
   ]);
 
   const categories = budgetRecords.map((b) => b.categoryName);
@@ -51,6 +52,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const unsettledSpecialWallets = wallets
     .filter((w) => w.type === "特別" && !w.settled)
     .map((w) => w.name);
+  const userNames = users.map((u) => u.name);
 
   return {
     entries,
@@ -60,6 +62,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     monthlyWalletName,
     selectedMonth,
     monthRange,
+    userNames,
   };
 }
 
@@ -89,6 +92,17 @@ export async function action({
     const categoryName = String(formData.get("categoryName") ?? "");
     try {
       await storage.updateLedgerEntryAttribution(entryId, walletName, categoryName);
+      return null;
+    } catch (e) {
+      const wrapped = e instanceof GoogleSheetsError ? e : wrapUnknownError(e);
+      return actionError(wrapped);
+    }
+  }
+
+  if (intent === "updateActor") {
+    const actor = String(formData.get("actor") ?? "");
+    try {
+      await storage.updateLedgerEntryActor(entryId, actor);
       return null;
     } catch (e) {
       const wrapped = e instanceof GoogleSheetsError ? e : wrapUnknownError(e);
@@ -152,6 +166,7 @@ function EntryRow({
   specialWalletNames,
   unsettledSpecialWallets,
   monthlyWalletName,
+  userNames,
 }: {
   entry: LedgerEntryWithId;
   categories: string[];
@@ -159,10 +174,14 @@ function EntryRow({
   specialWalletNames: string[];
   unsettledSpecialWallets: string[];
   monthlyWalletName: string;
+  userNames: string[];
 }) {
   const fetcher = useFetcher<typeof action>();
+  const actorFetcher = useFetcher<typeof action>();
   const actionData = fetcher.data as ActionError | null | undefined;
+  const actorActionData = actorFetcher.data as ActionError | null | undefined;
   useActionErrorToast(actionData);
+  useActionErrorToast(actorActionData);
 
   const currentAttribution = encodeAttribution(entry, monthlyWalletName, specialWalletNames, categories);
   const optimisticAttribution = useMemo(() => {
@@ -177,6 +196,38 @@ function EntryRow({
     }
     return currentAttribution;
   }, [fetcher.formData, currentAttribution, specialWalletNames]);
+
+  const optimisticActor = useMemo(() => {
+    const fd = actorFetcher.formData;
+    if (!fd) return entry.actor;
+    return String(fd.get("actor") ?? entry.actor);
+  }, [actorFetcher.formData, entry.actor]);
+
+  const [actorModalOpen, setActorModalOpen] = useState(false);
+  const [actorModalVisible, setActorModalVisible] = useState(false);
+
+  function openActorModal() {
+    setActorModalOpen(true);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setActorModalVisible(true));
+    });
+  }
+
+  function closeActorModal() {
+    setActorModalVisible(false);
+    setTimeout(() => setActorModalOpen(false), 250);
+  }
+
+  function handleSelectActor(actor: string) {
+    actorFetcher.submit(
+      { intent: "updateActor", entryId: entry.id, actor },
+      { method: "post", action: "/calendar" },
+    );
+    closeActorModal();
+  }
+
+  const isUserActor = userNames.includes(optimisticActor);
+  const actorLabel = isUserActor ? `${optimisticActor}立替` : null;
 
   const isPending = fetcher.state !== "idle";
   const isSpecialWallet = optimisticAttribution.startsWith("WALLET:");
@@ -194,77 +245,163 @@ function EntryRow({
     !unsettledSpecialWallets.includes(currentWalletName);
 
   return (
-    <div className="bg-background rounded-2xl px-4 py-3 flex items-start gap-3 border border-border/30 shadow-[0_1px_4px_-2px_oklch(0.30_0.02_30_/_0.08)]">
-      {/* アトリビューションドット＋セレクト＋メモ */}
-      <div className="flex-1 min-w-0 space-y-1.5">
-        <div className="flex items-center gap-2">
-          {isSpecialWallet ? (
-            <span
-              className="size-2 rounded-full shrink-0 mt-px border border-foreground/40 bg-background"
-              aria-hidden
-            />
-          ) : (
-            <span
-              className="size-2 rounded-full shrink-0 mt-px"
-              style={{ backgroundColor: dotColor }}
-              aria-hidden
-            />
+    <>
+      <div className="bg-background rounded-2xl px-4 py-3 flex items-start gap-3 border border-border/30 shadow-[0_1px_4px_-2px_oklch(0.30_0.02_30_/_0.08)]">
+        {/* アトリビューションドット＋セレクト＋アクター＋メモ */}
+        <div className="flex-1 min-w-0 space-y-1.5">
+          <div className="flex items-center gap-2">
+            {isSpecialWallet ? (
+              <span
+                className="size-2 rounded-full shrink-0 mt-px border border-foreground/40 bg-background"
+                aria-hidden
+              />
+            ) : (
+              <span
+                className="size-2 rounded-full shrink-0 mt-px"
+                style={{ backgroundColor: dotColor }}
+                aria-hidden
+              />
+            )}
+            <select
+              key={optimisticAttribution}
+              defaultValue={optimisticAttribution}
+              disabled={isPending}
+              onChange={(e) => {
+                const { walletName, categoryName } = decodeAttribution(
+                  e.target.value,
+                  monthlyWalletName,
+                );
+                fetcher.submit(
+                  {
+                    intent: "updateAttribution",
+                    entryId: entry.id,
+                    walletName,
+                    categoryName,
+                  },
+                  { method: "post", action: "/calendar" },
+                );
+              }}
+              className="text-[13px] font-medium rounded-lg border border-border/40 bg-muted px-2 py-0.5 text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
+            >
+              <optgroup label="月次カテゴリ">
+                {categories.map((cat) => (
+                  <option key={cat} value={`CATEGORY:${cat}`}>
+                    {cat}
+                  </option>
+                ))}
+                <option value="CATEGORY:">未分類</option>
+              </optgroup>
+              <optgroup label="特別財布">
+                {unsettledSpecialWallets.map((name) => (
+                  <option key={name} value={`WALLET:${name}`}>
+                    {name}
+                  </option>
+                ))}
+                {needsSettledOption && (
+                  <option value={`WALLET:${currentWalletName}`} disabled>
+                    {currentWalletName}（精算済み）
+                  </option>
+                )}
+              </optgroup>
+            </select>
+
+            {/* アクタートリガー: バッジ（立替設定時）or 点線丸ボタン（未設定時） */}
+            <button
+              type="button"
+              onClick={openActorModal}
+              disabled={actorFetcher.state !== "idle"}
+              className={
+                actorLabel
+                  ? "shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 active:bg-amber-200 transition-colors disabled:opacity-50"
+                  : "shrink-0 text-[10px] px-1.5 py-0.5 rounded-full text-muted-foreground/40 border border-border/30 hover:text-muted-foreground/70 hover:border-border/60 transition-colors disabled:opacity-30"
+              }
+              aria-label={actorLabel ? `${actorLabel}（タップで変更）` : "立替を設定"}
+            >
+              {actorLabel ?? "共同"}
+            </button>
+          </div>
+
+          {entry.memo && (
+            <p className="text-[11px] text-muted-foreground/65 truncate pl-4">
+              {entry.memo}
+            </p>
           )}
-          <select
-            key={optimisticAttribution}
-            defaultValue={optimisticAttribution}
-            disabled={isPending}
-            onChange={(e) => {
-              const { walletName, categoryName } = decodeAttribution(
-                e.target.value,
-                monthlyWalletName,
-              );
-              fetcher.submit(
-                {
-                  intent: "updateAttribution",
-                  entryId: entry.id,
-                  walletName,
-                  categoryName,
-                },
-                { method: "post", action: "/calendar" },
-              );
-            }}
-            className="text-[13px] font-medium rounded-lg border border-border/40 bg-muted px-2 py-0.5 text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
-          >
-            <optgroup label="月次カテゴリ">
-              {categories.map((cat) => (
-                <option key={cat} value={`CATEGORY:${cat}`}>
-                  {cat}
-                </option>
-              ))}
-              <option value="CATEGORY:">未分類</option>
-            </optgroup>
-            <optgroup label="特別財布">
-              {unsettledSpecialWallets.map((name) => (
-                <option key={name} value={`WALLET:${name}`}>
-                  {name}
-                </option>
-              ))}
-              {needsSettledOption && (
-                <option value={`WALLET:${currentWalletName}`} disabled>
-                  {currentWalletName}（精算済み）
-                </option>
-              )}
-            </optgroup>
-          </select>
         </div>
-        {entry.memo && (
-          <p className="text-[11px] text-muted-foreground/65 truncate pl-4">
-            {entry.memo}
-          </p>
-        )}
+
+        {/* 金額 */}
+        <span className="font-numeric tabular-nums font-bold text-base text-foreground/90 shrink-0 pt-0.5">
+          ¥{entry.amount.toLocaleString()}
+        </span>
       </div>
 
-      {/* 金額 */}
-      <span className="font-numeric tabular-nums font-bold text-base text-foreground/90 shrink-0 pt-0.5">
-        ¥{entry.amount.toLocaleString()}
-      </span>
-    </div>
+      {/* アクター選択モーダル */}
+      {actorModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center">
+          {/* バックドロップ */}
+          <div
+            className="absolute inset-0 bg-black/50 transition-opacity duration-200"
+            style={{ opacity: actorModalVisible ? 1 : 0 }}
+            onClick={closeActorModal}
+          />
+          {/* ボトムシート */}
+          <div
+            className="relative w-full max-w-md rounded-t-3xl bg-card border-t border-x border-border/50 shadow-[0_-8px_40px_-4px_oklch(0.30_0.02_30_/_0.20)] overflow-hidden transition-transform duration-[250ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+            style={{
+              transform: actorModalVisible ? "translateY(0)" : "translateY(100%)",
+            }}
+          >
+            {/* ドラッグハンドル */}
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="w-10 h-1 rounded-full bg-border/80" />
+            </div>
+
+            {/* タイトル */}
+            <p className="text-center text-[13px] font-semibold text-muted-foreground pb-1">
+              立替を設定
+            </p>
+
+            {/* 選択肢 */}
+            <div className="px-3 pb-4">
+              {(["共同", ...userNames] as string[]).map((name) => {
+                const label = name === "共同" ? "共同（立替なし）" : `${name}立替`;
+                const isSelected = optimisticActor === name;
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => handleSelectActor(name)}
+                    className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl hover:bg-muted/60 active:bg-muted transition-colors"
+                  >
+                    <span
+                      className={
+                        isSelected
+                          ? "text-[15px] font-bold text-primary"
+                          : "text-[15px] text-foreground"
+                      }
+                    >
+                      {label}
+                    </span>
+                    {isSelected && (
+                      <span className="text-primary font-bold text-base">✓</span>
+                    )}
+                  </button>
+                );
+              })}
+
+              <div className="mt-1 border-t border-border/30 pt-1">
+                <button
+                  type="button"
+                  onClick={closeActorModal}
+                  className="w-full py-3 text-[14px] text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  キャンセル
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -277,6 +414,7 @@ function DayDetailPanel({
   specialWalletNames,
   unsettledSpecialWallets,
   monthlyWalletName,
+  userNames,
   onClose,
 }: {
   date: string;
@@ -285,6 +423,7 @@ function DayDetailPanel({
   specialWalletNames: string[];
   unsettledSpecialWallets: string[];
   monthlyWalletName: string;
+  userNames: string[];
   onClose: () => void;
 }) {
   const [visible, setVisible] = useState(false);
@@ -360,6 +499,7 @@ function DayDetailPanel({
                 specialWalletNames={specialWalletNames}
                 unsettledSpecialWallets={unsettledSpecialWallets}
                 monthlyWalletName={monthlyWalletName}
+                userNames={userNames}
               />
             ))
           )}
@@ -380,6 +520,7 @@ export default function CalendarPage() {
     monthlyWalletName,
     selectedMonth,
     monthRange,
+    userNames,
   } = useLoaderData<typeof loader>();
 
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -449,6 +590,7 @@ export default function CalendarPage() {
           specialWalletNames={specialWalletNames}
           unsettledSpecialWallets={unsettledSpecialWallets}
           monthlyWalletName={monthlyWalletName}
+          userNames={userNames}
           onClose={() => setSelectedDate(null)}
         />
       )}

@@ -123,6 +123,11 @@ export function createTestStorage(init: TestStorageInit = {}): Storage {
       }
     },
 
+    async updateLedgerEntryActor(entryId: string, actor: string) {
+      const entry = ledger.find((e) => e.id === entryId);
+      if (entry) entry.actor = actor;
+    },
+
     async getLatestLedgerEntry() {
       if (ledger.length === 0) return null;
       const latest = ledger.reduce((prev, cur) =>
