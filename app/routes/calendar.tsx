@@ -203,18 +203,27 @@ function EntryRow({
     return String(fd.get("actor") ?? entry.actor);
   }, [actorFetcher.formData, entry.actor]);
 
-  function handleActorCycle() {
-    const idx = userNames.indexOf(optimisticActor);
-    const next =
-      idx === -1
-        ? (userNames[0] ?? "共同")
-        : idx + 1 < userNames.length
-          ? userNames[idx + 1]
-          : "共同";
+  const [actorModalOpen, setActorModalOpen] = useState(false);
+  const [actorModalVisible, setActorModalVisible] = useState(false);
+
+  function openActorModal() {
+    setActorModalOpen(true);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setActorModalVisible(true));
+    });
+  }
+
+  function closeActorModal() {
+    setActorModalVisible(false);
+    setTimeout(() => setActorModalOpen(false), 250);
+  }
+
+  function handleSelectActor(actor: string) {
     actorFetcher.submit(
-      { intent: "updateActor", entryId: entry.id, actor: next },
+      { intent: "updateActor", entryId: entry.id, actor },
       { method: "post", action: "/calendar" },
     );
+    closeActorModal();
   }
 
   const isUserActor = userNames.includes(optimisticActor);
@@ -236,92 +245,173 @@ function EntryRow({
     !unsettledSpecialWallets.includes(currentWalletName);
 
   return (
-    <div className="bg-background rounded-2xl px-4 py-3 flex items-start gap-3 border border-border/30 shadow-[0_1px_4px_-2px_oklch(0.30_0.02_30_/_0.08)]">
-      {/* アトリビューションドット＋セレクト＋メモ */}
-      <div className="flex-1 min-w-0 space-y-1.5">
-        <div className="flex items-center gap-2">
-          {isSpecialWallet ? (
-            <span
-              className="size-2 rounded-full shrink-0 mt-px border border-foreground/40 bg-background"
-              aria-hidden
-            />
-          ) : (
-            <span
-              className="size-2 rounded-full shrink-0 mt-px"
-              style={{ backgroundColor: dotColor }}
-              aria-hidden
-            />
+    <>
+      <div className="bg-background rounded-2xl px-4 py-3 flex items-start gap-3 border border-border/30 shadow-[0_1px_4px_-2px_oklch(0.30_0.02_30_/_0.08)]">
+        {/* アトリビューションドット＋セレクト＋アクター＋メモ */}
+        <div className="flex-1 min-w-0 space-y-1.5">
+          <div className="flex items-center gap-2">
+            {isSpecialWallet ? (
+              <span
+                className="size-2 rounded-full shrink-0 mt-px border border-foreground/40 bg-background"
+                aria-hidden
+              />
+            ) : (
+              <span
+                className="size-2 rounded-full shrink-0 mt-px"
+                style={{ backgroundColor: dotColor }}
+                aria-hidden
+              />
+            )}
+            <select
+              key={optimisticAttribution}
+              defaultValue={optimisticAttribution}
+              disabled={isPending}
+              onChange={(e) => {
+                const { walletName, categoryName } = decodeAttribution(
+                  e.target.value,
+                  monthlyWalletName,
+                );
+                fetcher.submit(
+                  {
+                    intent: "updateAttribution",
+                    entryId: entry.id,
+                    walletName,
+                    categoryName,
+                  },
+                  { method: "post", action: "/calendar" },
+                );
+              }}
+              className="text-[13px] font-medium rounded-lg border border-border/40 bg-muted px-2 py-0.5 text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
+            >
+              <optgroup label="月次カテゴリ">
+                {categories.map((cat) => (
+                  <option key={cat} value={`CATEGORY:${cat}`}>
+                    {cat}
+                  </option>
+                ))}
+                <option value="CATEGORY:">未分類</option>
+              </optgroup>
+              <optgroup label="特別財布">
+                {unsettledSpecialWallets.map((name) => (
+                  <option key={name} value={`WALLET:${name}`}>
+                    {name}
+                  </option>
+                ))}
+                {needsSettledOption && (
+                  <option value={`WALLET:${currentWalletName}`} disabled>
+                    {currentWalletName}（精算済み）
+                  </option>
+                )}
+              </optgroup>
+            </select>
+          </div>
+
+          {/* 立替バッジ（ユーザーアクター時のみ表示） */}
+          {actorLabel && (
+            <button
+              type="button"
+              onClick={openActorModal}
+              disabled={actorFetcher.state !== "idle"}
+              className="ml-4 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 active:bg-amber-200 transition-colors disabled:opacity-50"
+            >
+              {actorLabel}
+            </button>
           )}
-          <select
-            key={optimisticAttribution}
-            defaultValue={optimisticAttribution}
-            disabled={isPending}
-            onChange={(e) => {
-              const { walletName, categoryName } = decodeAttribution(
-                e.target.value,
-                monthlyWalletName,
-              );
-              fetcher.submit(
-                {
-                  intent: "updateAttribution",
-                  entryId: entry.id,
-                  walletName,
-                  categoryName,
-                },
-                { method: "post", action: "/calendar" },
-              );
-            }}
-            className="text-[13px] font-medium rounded-lg border border-border/40 bg-muted px-2 py-0.5 text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-50"
-          >
-            <optgroup label="月次カテゴリ">
-              {categories.map((cat) => (
-                <option key={cat} value={`CATEGORY:${cat}`}>
-                  {cat}
-                </option>
-              ))}
-              <option value="CATEGORY:">未分類</option>
-            </optgroup>
-            <optgroup label="特別財布">
-              {unsettledSpecialWallets.map((name) => (
-                <option key={name} value={`WALLET:${name}`}>
-                  {name}
-                </option>
-              ))}
-              {needsSettledOption && (
-                <option value={`WALLET:${currentWalletName}`} disabled>
-                  {currentWalletName}（精算済み）
-                </option>
-              )}
-            </optgroup>
-          </select>
+
+          {entry.memo && (
+            <p className="text-[11px] text-muted-foreground/65 truncate pl-4">
+              {entry.memo}
+            </p>
+          )}
         </div>
-        {entry.memo && (
-          <p className="text-[11px] text-muted-foreground/65 truncate pl-4">
-            {entry.memo}
-          </p>
-        )}
+
+        {/* 金額 + 立替設定ボタン */}
+        <div className="flex flex-col items-end shrink-0 pt-0.5 gap-1.5">
+          <span className="font-numeric tabular-nums font-bold text-base text-foreground/90">
+            ¥{entry.amount.toLocaleString()}
+          </span>
+          {!actorLabel && (
+            <button
+              type="button"
+              onClick={openActorModal}
+              disabled={actorFetcher.state !== "idle"}
+              className="text-[10px] text-muted-foreground/30 hover:text-muted-foreground/70 transition-colors leading-none disabled:opacity-30"
+              aria-label="立替に設定"
+            >
+              立替
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* アクター + 金額 */}
-      <div className="flex flex-col items-end gap-1 shrink-0 pt-0.5">
-        <span className="font-numeric tabular-nums font-bold text-base text-foreground/90">
-          ¥{entry.amount.toLocaleString()}
-        </span>
-        <button
-          type="button"
-          onClick={handleActorCycle}
-          disabled={actorFetcher.state !== "idle"}
-          className={
-            actorLabel
-              ? "text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 active:bg-amber-200 transition-colors disabled:opacity-50"
-              : "text-[10px] text-muted-foreground/25 hover:text-muted-foreground/60 px-1 py-0.5 rounded transition-colors leading-none disabled:opacity-30"
-          }
-          aria-label={actorLabel ? `${actorLabel}（タップで変更）` : "立替に設定"}
-        >
-          {actorLabel ?? "共同"}
-        </button>
-      </div>
-    </div>
+      {/* アクター選択モーダル */}
+      {actorModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center">
+          {/* バックドロップ */}
+          <div
+            className="absolute inset-0 bg-black/50 transition-opacity duration-200"
+            style={{ opacity: actorModalVisible ? 1 : 0 }}
+            onClick={closeActorModal}
+          />
+          {/* ボトムシート */}
+          <div
+            className="relative w-full max-w-md rounded-t-3xl bg-card border-t border-x border-border/50 shadow-[0_-8px_40px_-4px_oklch(0.30_0.02_30_/_0.20)] overflow-hidden transition-transform duration-[250ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+            style={{
+              transform: actorModalVisible ? "translateY(0)" : "translateY(100%)",
+            }}
+          >
+            {/* ドラッグハンドル */}
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="w-10 h-1 rounded-full bg-border/80" />
+            </div>
+
+            {/* タイトル */}
+            <p className="text-center text-[13px] font-semibold text-muted-foreground pb-1">
+              立替を設定
+            </p>
+
+            {/* 選択肢 */}
+            <div className="px-3 pb-4">
+              {(["共同", ...userNames] as string[]).map((name) => {
+                const label = name === "共同" ? "共同（立替なし）" : `${name}立替`;
+                const isSelected = optimisticActor === name;
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => handleSelectActor(name)}
+                    className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl hover:bg-muted/60 active:bg-muted transition-colors"
+                  >
+                    <span
+                      className={
+                        isSelected
+                          ? "text-[15px] font-bold text-primary"
+                          : "text-[15px] text-foreground"
+                      }
+                    >
+                      {label}
+                    </span>
+                    {isSelected && (
+                      <span className="text-primary font-bold text-base">✓</span>
+                    )}
+                  </button>
+                );
+              })}
+
+              <div className="mt-1 border-t border-border/30 pt-1">
+                <button
+                  type="button"
+                  onClick={closeActorModal}
+                  className="w-full py-3 text-[14px] text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  キャンセル
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
