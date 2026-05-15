@@ -35,14 +35,11 @@ export async function getSpecialWalletsPageData(deps: {
         const totalUsed = entries
           .filter((e) => e.type === "支出")
           .reduce((sum, e) => sum + e.amount, 0);
-        // "__special__" は旧カテゴリ名。"一括" レコードがあればそちらを優先し、
-        // 旧レコードとの重複集計を防ぐ。
-        const ikkatsukiRecords = budgetRecords.filter(
-          (b) => b.categoryName === "一括",
-        );
-        const totalBudget = (
-          ikkatsukiRecords.length > 0 ? ikkatsukiRecords : budgetRecords
-        ).reduce((sum, b) => sum + b.amount, 0);
+        // 特別財布の予算は常に1件。"一括" カテゴリを優先し、なければ先頭の1件を使う。
+        const budgetRecord =
+          budgetRecords.find((b) => b.categoryName === "一括") ??
+          budgetRecords[0];
+        const totalBudget = budgetRecord?.amount ?? 0;
         const usagePercentage =
           totalBudget > 0 ? Math.round((totalUsed / totalBudget) * 100) : 0;
         const latestDate =
