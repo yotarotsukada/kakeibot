@@ -349,6 +349,19 @@ export class MockStorage implements Storage {
     }
   }
 
+  async updateLedgerEntryActor(
+    entryId: string,
+    actor: string,
+  ): Promise<void> {
+    const entry = this.ledger.find((e) => e.transactionId === entryId);
+    if (entry) {
+      entry.actor = actor;
+      console.log(
+        `[MockStorage] ✏️  アクター更新: ${entryId} → actor=${actor}`,
+      );
+    }
+  }
+
   async getLatestLedgerEntry(): Promise<{
     walletName: string;
     date: string;
