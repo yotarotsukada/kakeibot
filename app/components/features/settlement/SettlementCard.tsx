@@ -7,21 +7,29 @@ export function SettlementCard({
   advancedAmount,
   transferAmount,
 }: UserSettlement) {
-  const isReceive = transferAmount < 0;
+  const isError = transferAmount < 0;
 
   return (
-    <Card className="rounded-3xl gap-0 py-0 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.15)]">
+    <Card className={cn(
+      "rounded-3xl gap-0 py-0 ring-1 shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.15)]",
+      isError ? "ring-destructive/40 bg-destructive/5" : "ring-foreground/[0.06]",
+    )}>
       <div className="px-5 pt-4 pb-5">
         <p className="text-xs font-semibold text-muted-foreground/80 mb-3 truncate">
           {userName}
         </p>
-        <p className="text-[10px] text-muted-foreground/60 mb-0.5">
-          {isReceive ? "受取" : "振込"}
-        </p>
+        {isError ? (
+          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-destructive bg-destructive/10 rounded-full px-2 py-0.5 mb-1.5">
+            <span className="size-1 rounded-full bg-destructive" aria-hidden />
+            立替超過
+          </span>
+        ) : (
+          <p className="text-[10px] text-muted-foreground/60 mb-0.5">振込</p>
+        )}
         <p
           className={cn(
             "font-numeric text-2xl font-extrabold leading-none tracking-tight tabular-nums",
-            isReceive ? "text-emerald-600" : "text-foreground",
+            isError ? "text-destructive" : "text-foreground",
           )}
         >
           <span className="text-base font-bold mr-0.5 align-baseline opacity-70">
