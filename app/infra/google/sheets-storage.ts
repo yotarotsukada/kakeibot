@@ -7,7 +7,7 @@ import { importPKCS8, SignJWT } from "jose";
 import type { BudgetRecord, Wallet } from "~/domain/budget/budget";
 import { GoogleSheetsError } from "~/domain/errors";
 import type { LedgerEntry } from "~/domain/ledger/entry";
-import type { LedgerEntryWithId, Storage } from "~/domain/storage";
+import type { LedgerEntryWithId, Storage, User } from "~/domain/storage";
 import { SHEET_NAMES } from "~/domain/storage";
 
 const SHEETS_BASE = "https://sheets.googleapis.com/v4/spreadsheets";
@@ -629,6 +629,27 @@ export class GoogleSheetsStorage implements Storage {
     } catch (err) {
       if (err instanceof GoogleSheetsError) throw err;
       throw new GoogleSheetsError("ユーザーマスタの検索に失敗しました", err);
+    }
+  }
+
+  async getUsers(): Promise<User[]> {
+    try {
+      const token = await this.getAccessToken();
+      const range = `${SHEET_NAMES.USER_MASTER}!A:B`;
+      const url = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(range)}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return [];
+      const data = (await res.json()) as { values?: string[][] };
+      if (!data.values) return [];
+      return data.values
+        .slice(1)
+        .filter((row) => row[0] && row[1])
+        .map((row) => ({ lineUserId: row[0], name: row[1] }));
+    } catch (err) {
+      if (err instanceof GoogleSheetsError) throw err;
+      throw new GoogleSheetsError("ユーザーマスタの取得に失敗しました", err);
     }
   }
 

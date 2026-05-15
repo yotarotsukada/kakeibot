@@ -4,7 +4,7 @@
 
 import type { BudgetRecord, Wallet } from "~/domain/budget/budget";
 import type { LedgerEntry } from "~/domain/ledger/entry";
-import type { LedgerEntryWithId, Storage } from "~/domain/storage";
+import type { LedgerEntryWithId, Storage, User } from "~/domain/storage";
 import { SHEET_NAMES } from "~/domain/storage";
 
 type StoredEntry = LedgerEntry & { transactionId: string };
@@ -358,5 +358,12 @@ export class MockStorage implements Storage {
       cur.date > prev.date ? cur : prev,
     );
     return { walletName: latest.wallet, date: latest.date };
+  }
+
+  async getUsers(): Promise<User[]> {
+    return Array.from(this.users.entries()).map(([lineUserId, name]) => ({
+      lineUserId,
+      name,
+    }));
   }
 }

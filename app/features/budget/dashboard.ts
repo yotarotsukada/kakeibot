@@ -17,6 +17,14 @@ export type WalletSummary = {
   usagePercentage: number;
 };
 
+export type UserSettlement = {
+  userName: string;
+  /** 月次財布内で shouldSettle=true かつ actor=userName の支出合計。 */
+  advancedAmount: number;
+  /** 各自の分担額 - 立替額。負のとき受取。 */
+  transferAmount: number;
+};
+
 export type DashboardCoreData = {
   normalWalletName: string;
   normalWalletExists: boolean;
@@ -28,6 +36,8 @@ export type DashboardCoreData = {
   recentWalletSummaries: WalletSummary[];
   /** 予算カテゴリに紐付けられない支出の合計。該当なしのときは null。 */
   miscUsed: number | null;
+  /** 月次財布の精算情報。ユーザーマスタが空のときは空配列。 */
+  settlements: UserSettlement[];
 };
 
 export async function getDashboardData(deps: {
@@ -37,10 +47,11 @@ export async function getDashboardData(deps: {
   try {
     const normalWalletName = `${deps.selectedMonth}通常`;
 
-    const [wallets, normalBudgets, normalEntries] = await Promise.all([
+    const [wallets, normalBudgets, normalEntries, users] = await Promise.all([
       deps.storage.getWallets(),
       deps.storage.getBudgetRecords(normalWalletName),
       deps.storage.getLedgerEntriesByWallet(normalWalletName),
+      deps.storage.getUsers(),
     ]);
 
     const normalWalletExists = wallets.some((w) => w.name === normalWalletName);
@@ -73,6 +84,27 @@ export async function getDashboardData(deps: {
       .filter((e) => e.type === "支出" && !budgetCategoryNames.has(e.category))
       .reduce((sum, e) => sum + e.amount, 0);
     const miscUsed = miscUsedAmount > 0 ? miscUsedAmount : null;
+
+    // 精算計算: 月次財布の立替額・振り込み額をユーザーごとに集計
+    const numUsers = users.length;
+    const settlements: UserSettlement[] = (() => {
+      if (numUsers === 0) return [];
+      const settleEntries = normalEntries.filter(
+        (e) => e.type === "支出" && e.shouldSettle,
+      );
+      const perUser = Math.floor(totalBudget / numUsers);
+      const remainder = totalBudget - perUser * numUsers;
+      return users.map((user, i) => {
+        const advancedAmount = settleEntries
+          .filter((e) => e.actor === user.name)
+          .reduce((sum, e) => sum + e.amount, 0);
+        const isLast = i === numUsers - 1;
+        const fairShare = isLast ? perUser + remainder : perUser;
+        const transferAmount =
+          totalBudget === 0 ? -advancedAmount : fairShare - advancedAmount;
+        return { userName: user.name, advancedAmount, transferAmount };
+      });
+    })();
 
     // 未精算の特別財布を取得し、各財布の明細・予算を並列フェッチ
     const unsettledSpecialWallets = wallets.filter(
@@ -125,6 +157,7 @@ export async function getDashboardData(deps: {
       categoryUsages,
       recentWalletSummaries,
       miscUsed,
+      settlements,
     });
   } catch (e) {
     return err(wrapUnknownError(e));

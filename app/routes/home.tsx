@@ -1,4 +1,5 @@
 import { Link, useLoaderData } from "react-router";
+import { SettlementCard } from "~/components/features/settlement/SettlementCard";
 import { SPECIAL_WALLET_ACCENT_COLOR } from "~/components/features/wallet/categoryColors";
 import { MonthSelector } from "~/components/features/wallet/MonthSelector";
 import { WalletCard } from "~/components/features/wallet/WalletCard";
@@ -43,6 +44,7 @@ export default function Home() {
     categoryUsages,
     miscUsed,
     recentWalletSummaries,
+    settlements,
     selectedMonth,
     monthRange,
   } = useLoaderData<typeof loader>();
@@ -114,6 +116,26 @@ export default function Home() {
                 accentColor={SPECIAL_WALLET_ACCENT_COLOR}
                 monthly={false}
               />
+            ))}
+          </div>
+        </section>
+      )}
+      {/*
+        精算エリア: 月次財布の立替額と振り込み額を表示。
+        ユーザーマスタにユーザーが登録されているときのみ表示。
+      */}
+      {settlements.length > 0 && (
+        <section className="space-y-3 pt-3">
+          <div className="flex items-center gap-3 px-1">
+            <span className="h-px flex-1 bg-border" aria-hidden />
+            <span className="text-[11px] font-semibold text-muted-foreground/70 tracking-wider">
+              精算
+            </span>
+            <span className="h-px flex-1 bg-border" aria-hidden />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {settlements.map((s) => (
+              <SettlementCard key={s.userName} {...s} />
             ))}
           </div>
         </section>
