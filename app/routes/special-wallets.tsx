@@ -31,7 +31,7 @@ import { cn } from "~/lib/utils";
 import type { Route } from "./+types/special-wallets";
 
 export function meta(_args: Route.MetaArgs) {
-  return [{ title: "財布" }];
+  return [{ title: "ふたりの家計簿 | 財布" }];
 }
 
 type FilterType = "unsettled" | "settled" | "all";

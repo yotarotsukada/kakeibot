@@ -21,7 +21,7 @@ import { buildMonthRange, getCurrentMonthJST, isValidMonth } from "~/lib/date";
 import type { Route } from "./+types/calendar";
 
 export function meta(_args: Route.MetaArgs) {
-  return [{ title: "カレンダー" }];
+  return [{ title: "ふたりの家計簿 | カレンダー" }];
 }
 
 export async function loader({ request, context }: Route.LoaderArgs) {

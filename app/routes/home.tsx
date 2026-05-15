@@ -13,7 +13,7 @@ import { buildMonthRange, getCurrentMonthJST, isValidMonth } from "~/lib/date";
 import type { Route } from "./+types/home";
 
 export function meta(_args: Route.MetaArgs) {
-  return [{ title: "家計" }];
+  return [{ title: "ふたりの家計簿 | 家計" }];
 }
 
 export async function loader({ request, context }: Route.LoaderArgs) {
