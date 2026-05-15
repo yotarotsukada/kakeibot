@@ -304,19 +304,22 @@ function EntryRow({
                 )}
               </optgroup>
             </select>
-          </div>
 
-          {/* 立替バッジ（ユーザーアクター時のみ表示） */}
-          {actorLabel && (
+            {/* アクタートリガー: バッジ（立替設定時）or 点線丸ボタン（未設定時） */}
             <button
               type="button"
               onClick={openActorModal}
               disabled={actorFetcher.state !== "idle"}
-              className="ml-4 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 active:bg-amber-200 transition-colors disabled:opacity-50"
+              className={
+                actorLabel
+                  ? "shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 active:bg-amber-200 transition-colors disabled:opacity-50"
+                  : "shrink-0 size-[18px] rounded-full border border-dashed border-border/40 hover:border-border/70 transition-colors disabled:opacity-30"
+              }
+              aria-label={actorLabel ? `${actorLabel}（タップで変更）` : "立替を設定"}
             >
               {actorLabel}
             </button>
-          )}
+          </div>
 
           {entry.memo && (
             <p className="text-[11px] text-muted-foreground/65 truncate pl-4">
@@ -325,23 +328,10 @@ function EntryRow({
           )}
         </div>
 
-        {/* 金額 + 立替設定ボタン */}
-        <div className="flex flex-col items-end shrink-0 pt-0.5 gap-1.5">
-          <span className="font-numeric tabular-nums font-bold text-base text-foreground/90">
-            ¥{entry.amount.toLocaleString()}
-          </span>
-          {!actorLabel && (
-            <button
-              type="button"
-              onClick={openActorModal}
-              disabled={actorFetcher.state !== "idle"}
-              className="text-[10px] text-muted-foreground/30 hover:text-muted-foreground/70 transition-colors leading-none disabled:opacity-30"
-              aria-label="立替に設定"
-            >
-              立替
-            </button>
-          )}
-        </div>
+        {/* 金額 */}
+        <span className="font-numeric tabular-nums font-bold text-base text-foreground/90 shrink-0 pt-0.5">
+          ¥{entry.amount.toLocaleString()}
+        </span>
       </div>
 
       {/* アクター選択モーダル */}
