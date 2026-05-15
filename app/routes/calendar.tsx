@@ -313,11 +313,11 @@ function EntryRow({
               className={
                 actorLabel
                   ? "shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 active:bg-amber-200 transition-colors disabled:opacity-50"
-                  : "shrink-0 size-[18px] rounded-full border border-dashed border-border/40 hover:border-border/70 transition-colors disabled:opacity-30"
+                  : "shrink-0 text-[10px] px-1.5 py-0.5 rounded-full text-muted-foreground/40 border border-border/30 hover:text-muted-foreground/70 hover:border-border/60 transition-colors disabled:opacity-30"
               }
               aria-label={actorLabel ? `${actorLabel}（タップで変更）` : "立替を設定"}
             >
-              {actorLabel}
+              {actorLabel ?? "共同"}
             </button>
           </div>
 
