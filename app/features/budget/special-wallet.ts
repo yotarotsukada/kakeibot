@@ -35,7 +35,8 @@ export async function getSpecialWalletsPageData(deps: {
         const totalUsed = entries
           .filter((e) => e.type === "支出")
           .reduce((sum, e) => sum + e.amount, 0);
-        const totalBudget = budgetRecords.reduce((sum, b) => sum + b.amount, 0);
+        const totalBudget =
+          budgetRecords[budgetRecords.length - 1]?.amount ?? 0;
         const usagePercentage =
           totalBudget > 0 ? Math.round((totalUsed / totalBudget) * 100) : 0;
         const latestDate =
