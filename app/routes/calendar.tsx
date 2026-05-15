@@ -38,10 +38,11 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     : currentMonth;
 
   const monthlyWalletName = `${selectedMonth}通常`;
-  const [entries, budgetRecords, wallets] = await Promise.all([
+  const [entries, budgetRecords, wallets, users] = await Promise.all([
     storage.getLedgerEntriesByMonth(selectedMonth),
     storage.getBudgetRecords(monthlyWalletName),
     storage.getWallets(),
+    storage.getUsers(),
   ]);
 
   const categories = budgetRecords.map((b) => b.categoryName);
@@ -51,6 +52,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const unsettledSpecialWallets = wallets
     .filter((w) => w.type === "特別" && !w.settled)
     .map((w) => w.name);
+  const userNames = users.map((u) => u.name);
 
   return {
     entries,
@@ -60,6 +62,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     monthlyWalletName,
     selectedMonth,
     monthRange,
+    userNames,
   };
 }
 
@@ -89,6 +92,17 @@ export async function action({
     const categoryName = String(formData.get("categoryName") ?? "");
     try {
       await storage.updateLedgerEntryAttribution(entryId, walletName, categoryName);
+      return null;
+    } catch (e) {
+      const wrapped = e instanceof GoogleSheetsError ? e : wrapUnknownError(e);
+      return actionError(wrapped);
+    }
+  }
+
+  if (intent === "updateActor") {
+    const actor = String(formData.get("actor") ?? "");
+    try {
+      await storage.updateLedgerEntryActor(entryId, actor);
       return null;
     } catch (e) {
       const wrapped = e instanceof GoogleSheetsError ? e : wrapUnknownError(e);
@@ -152,6 +166,7 @@ function EntryRow({
   specialWalletNames,
   unsettledSpecialWallets,
   monthlyWalletName,
+  userNames,
 }: {
   entry: LedgerEntryWithId;
   categories: string[];
@@ -159,10 +174,14 @@ function EntryRow({
   specialWalletNames: string[];
   unsettledSpecialWallets: string[];
   monthlyWalletName: string;
+  userNames: string[];
 }) {
   const fetcher = useFetcher<typeof action>();
+  const actorFetcher = useFetcher<typeof action>();
   const actionData = fetcher.data as ActionError | null | undefined;
+  const actorActionData = actorFetcher.data as ActionError | null | undefined;
   useActionErrorToast(actionData);
+  useActionErrorToast(actorActionData);
 
   const currentAttribution = encodeAttribution(entry, monthlyWalletName, specialWalletNames, categories);
   const optimisticAttribution = useMemo(() => {
@@ -177,6 +196,29 @@ function EntryRow({
     }
     return currentAttribution;
   }, [fetcher.formData, currentAttribution, specialWalletNames]);
+
+  const optimisticActor = useMemo(() => {
+    const fd = actorFetcher.formData;
+    if (!fd) return entry.actor;
+    return String(fd.get("actor") ?? entry.actor);
+  }, [actorFetcher.formData, entry.actor]);
+
+  function handleActorCycle() {
+    const idx = userNames.indexOf(optimisticActor);
+    const next =
+      idx === -1
+        ? (userNames[0] ?? "共同")
+        : idx + 1 < userNames.length
+          ? userNames[idx + 1]
+          : "共同";
+    actorFetcher.submit(
+      { intent: "updateActor", entryId: entry.id, actor: next },
+      { method: "post", action: "/calendar" },
+    );
+  }
+
+  const isUserActor = userNames.includes(optimisticActor);
+  const actorLabel = isUserActor ? `${optimisticActor}立替` : null;
 
   const isPending = fetcher.state !== "idle";
   const isSpecialWallet = optimisticAttribution.startsWith("WALLET:");
@@ -260,10 +302,25 @@ function EntryRow({
         )}
       </div>
 
-      {/* 金額 */}
-      <span className="font-numeric tabular-nums font-bold text-base text-foreground/90 shrink-0 pt-0.5">
-        ¥{entry.amount.toLocaleString()}
-      </span>
+      {/* アクター + 金額 */}
+      <div className="flex flex-col items-end gap-1 shrink-0 pt-0.5">
+        <span className="font-numeric tabular-nums font-bold text-base text-foreground/90">
+          ¥{entry.amount.toLocaleString()}
+        </span>
+        <button
+          type="button"
+          onClick={handleActorCycle}
+          disabled={actorFetcher.state !== "idle"}
+          className={
+            actorLabel
+              ? "text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 active:bg-amber-200 transition-colors disabled:opacity-50"
+              : "text-[10px] text-muted-foreground/25 hover:text-muted-foreground/60 px-1 py-0.5 rounded transition-colors leading-none disabled:opacity-30"
+          }
+          aria-label={actorLabel ? `${actorLabel}（タップで変更）` : "立替に設定"}
+        >
+          {actorLabel ?? "共同"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -277,6 +334,7 @@ function DayDetailPanel({
   specialWalletNames,
   unsettledSpecialWallets,
   monthlyWalletName,
+  userNames,
   onClose,
 }: {
   date: string;
@@ -285,6 +343,7 @@ function DayDetailPanel({
   specialWalletNames: string[];
   unsettledSpecialWallets: string[];
   monthlyWalletName: string;
+  userNames: string[];
   onClose: () => void;
 }) {
   const [visible, setVisible] = useState(false);
@@ -360,6 +419,7 @@ function DayDetailPanel({
                 specialWalletNames={specialWalletNames}
                 unsettledSpecialWallets={unsettledSpecialWallets}
                 monthlyWalletName={monthlyWalletName}
+                userNames={userNames}
               />
             ))
           )}
@@ -380,6 +440,7 @@ export default function CalendarPage() {
     monthlyWalletName,
     selectedMonth,
     monthRange,
+    userNames,
   } = useLoaderData<typeof loader>();
 
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -449,6 +510,7 @@ export default function CalendarPage() {
           specialWalletNames={specialWalletNames}
           unsettledSpecialWallets={unsettledSpecialWallets}
           monthlyWalletName={monthlyWalletName}
+          userNames={userNames}
           onClose={() => setSelectedDate(null)}
         />
       )}

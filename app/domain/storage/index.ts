@@ -47,5 +47,6 @@ export interface Storage {
     walletName: string,
     categoryName: string,
   ): Promise<void>;
+  updateLedgerEntryActor(entryId: string, actor: string): Promise<void>;
   getUsers(): Promise<User[]>;
 }

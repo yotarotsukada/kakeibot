@@ -610,6 +610,48 @@ export class GoogleSheetsStorage implements Storage {
     }
   }
 
+  async updateLedgerEntryActor(
+    entryId: string,
+    actor: string,
+  ): Promise<void> {
+    try {
+      const token = await this.getAccessToken();
+      const idsRange = `${SHEET_NAMES.LEDGER}!A:A`;
+      const url = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(idsRange)}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`Sheets read failed: ${res.status}`);
+      const data = (await res.json()) as { values?: string[][] };
+      const rows = data.values ?? [];
+      const rowIdx = rows.findIndex((row) => row[0] === entryId);
+      if (rowIdx === -1)
+        throw new Error(`元帳エントリが見つかりません: ${entryId}`);
+
+      const cellRange = `${SHEET_NAMES.LEDGER}!E${rowIdx + 1}`;
+      const updateUrl = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(cellRange)}?valueInputOption=USER_ENTERED`;
+      const updateRes = await fetch(updateUrl, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          range: cellRange,
+          majorDimension: "ROWS",
+          values: [[actor]],
+        }),
+      });
+      if (!updateRes.ok)
+        throw new Error(
+          `Sheets update failed: ${updateRes.status} ${await updateRes.text()}`,
+        );
+    } catch (err) {
+      if (err instanceof GoogleSheetsError) throw err;
+      throw new GoogleSheetsError("アクターの更新に失敗しました", err);
+    }
+  }
+
   async findActorByLineUserId(lineUserId: string): Promise<string | null> {
     try {
       const token = await this.getAccessToken();
