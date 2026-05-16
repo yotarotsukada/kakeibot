@@ -52,6 +52,12 @@ domain  ← features  ← routes
 
 ## コーディング規約
 
+### パッケージマネージャー
+
+- **pnpm を使う**。`npm install` / `yarn` は使わない。
+- ロックファイルは `pnpm-lock.yaml` のみをコミットする。`package-lock.json` / `yarn.lock` が生成されたら削除してコミットしない。
+- CI・スクリプト・エージェントがパッケージを追加・インストールするときも `pnpm add` / `pnpm install` を使う。
+
 ### 基本
 
 - **`enum` 禁止**: 代わりにユニオン型（`type X = 'A' | 'B'`）または定数オブジェクト（`as const`）を使う。
