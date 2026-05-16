@@ -1,6 +1,6 @@
 ---
 name: coding-standards
-description: 機能実装・修正時に適用するアーキテクチャ規範とコーディング規約。レイヤ越境ルール（domain/features/infra/routes）・valibot駆動の型導出・enum/any禁止・Cloudflare Workers互換・AppErrorラップ・features層のResult型返却。app/配下の実装・レビュー・リファクタ時に必ず参照。
+description: app/配下のコード実装・レビュー・リファクタ時に使う。kakeibotのアーキテクチャ規範とコーディング規約を提供する。レイヤ越境ルール（domain/features/infra/routes）、features層のResult型返却（throw禁止）、valibot駆動の型導出（InferOutput / as Type禁止）、AppError階層によるエラーラップ、enum / any禁止、Cloudflare Workers（workerd）互換、AIへの推測委譲の境界。
 ---
 
 ## アーキテクチャ規範

@@ -1,6 +1,6 @@
 ---
 name: design-system
-description: kakeibotのUI言語「Family Savings Cheer」。カラートークン・タイポグラフィ・スペーシング・shadcn運用・dirty-state-aware UI・モバイルLIFF前提・Hugeicons統一・PageLayout/BottomNav。UIコンポーネント新規作成・既存改修・スタイル調整・新画面追加時に必ず参照。
+description: UIコンポーネントの新規作成・既存改修・スタイル調整・新画面追加時に使う。kakeibotのUI言語「Family Savings Cheer」を提供する。カラートークン（OKLCh / Coral Peach primary、Tailwindプリセット色禁止）、font-numericとタイポスケール、dirty-state-aware UI、PageLayout（max-w-md）/ BottomNav、shadcn運用、Hugeicons統一、モバイルLIFF前提、外部frontend-designプラグインとの役割分担。
 ---
 
 > "Family Savings Cheer" — 家族で楽しく貯金するための明るく柔らかい UI 言語

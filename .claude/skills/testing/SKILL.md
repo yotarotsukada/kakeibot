@@ -1,6 +1,6 @@
 ---
 name: testing
-description: kakeibotのテスト戦略・対象優先度・モック差し替え方針・spec.tsファイル配置規約。Vitest/Playwright/React Testing Library。テスト追加・修正・テスト設計・モックスコープの判断時に参照。
+description: テストファイルの新規追加・修正・テスト設計・モック差し替え範囲の判断時に使う。kakeibotのテスト戦略と配置規約を提供する。Vitest / React Testing Library / Playwright、対象優先度（domain → features → component → loader/action）、3軸モック（LINE / AI / Storage）の差し替え単位、test/配下集約（__tests__/不可）、明示的スコープ外（Recharts内部 / LIFF SDK / webhook統合）。
 ---
 
 家計簿アプリのテストを書くときの方針。実行コマンドは `README.md` の「テスト / 型 / Lint の実行」を参照。
