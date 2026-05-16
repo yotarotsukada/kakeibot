@@ -6,6 +6,7 @@ export default [
   route("auth/callback", "routes/auth.callback.ts"),
   route("budget", "routes/budget.tsx"),
   route("calendar", "routes/calendar.tsx"),
+  route("savings", "routes/savings.tsx"),
   route("special-wallets", "routes/special-wallets.tsx"),
   route("webhook", "routes/webhook.ts"),
 ] satisfies RouteConfig;

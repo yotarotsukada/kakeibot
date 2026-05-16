@@ -12,7 +12,7 @@ type StoredEntry = LedgerEntry & { transactionId: string };
 const SEED_WALLETS: Wallet[] = [
   { name: "2026-05通常", type: "月次", settled: false },
   { name: "2026-04通常", type: "月次", settled: false },
-  { name: "2026-03通常", type: "月次", settled: false },
+  { name: "2026-03通常", type: "月次", settled: true },
   { name: "沖縄旅行", type: "特別", settled: false },
   { name: "新居家具", type: "特別", settled: false },
   { name: "結婚記念旅行", type: "特別", settled: true },
@@ -25,6 +25,9 @@ const SEED_BUDGETS: BudgetRecord[] = [
   { walletName: "2026-05通常", categoryName: "外食費", amount: 20000 },
   { walletName: "2026-04通常", categoryName: "食費", amount: 48000 },
   { walletName: "2026-04通常", categoryName: "日用品費", amount: 28000 },
+  { walletName: "2026-03通常", categoryName: "食費", amount: 48000 },
+  { walletName: "2026-03通常", categoryName: "日用品費", amount: 28000 },
+  { walletName: "2026-03通常", categoryName: "交通費", amount: 10000 },
   // 特別財布は合計予算を1件（予約カテゴリ）で保持する
   {
     walletName: "沖縄旅行",
@@ -44,6 +47,40 @@ const SEED_BUDGETS: BudgetRecord[] = [
 ];
 
 const SEED_LEDGER: StoredEntry[] = [
+  // 月次入金（毎月の生活費入金）
+  {
+    transactionId: "seed-income-03",
+    date: "2026-03-25",
+    type: "入金",
+    amount: 110000,
+    actor: "共同",
+    category: "入金",
+    wallet: "2026-03通常",
+    shouldSettle: false,
+    memo: "3月生活費",
+  },
+  {
+    transactionId: "seed-income-04",
+    date: "2026-04-25",
+    type: "入金",
+    amount: 110000,
+    actor: "共同",
+    category: "入金",
+    wallet: "2026-04通常",
+    shouldSettle: false,
+    memo: "4月生活費",
+  },
+  {
+    transactionId: "seed-income-05",
+    date: "2026-05-25",
+    type: "入金",
+    amount: 110000,
+    actor: "共同",
+    category: "入金",
+    wallet: "2026-05通常",
+    shouldSettle: false,
+    memo: "5月生活費",
+  },
   {
     transactionId: "seed-001",
     date: "2026-05-01",
@@ -167,6 +204,29 @@ const SEED_LEDGER: StoredEntry[] = [
     wallet: "結婚記念旅行",
     shouldSettle: true,
     memo: "京都温泉旅館",
+  },
+  // 2026-03通常 の履歴
+  {
+    transactionId: "seed-015",
+    date: "2026-03-08",
+    type: "支出",
+    amount: 35000,
+    actor: "A",
+    category: "食費",
+    wallet: "2026-03通常",
+    shouldSettle: true,
+    memo: "3月食費",
+  },
+  {
+    transactionId: "seed-016",
+    date: "2026-03-20",
+    type: "支出",
+    amount: 18000,
+    actor: "B",
+    category: "日用品費",
+    wallet: "2026-03通常",
+    shouldSettle: true,
+    memo: "3月日用品",
   },
   // 2026-04通常 の履歴
   {
