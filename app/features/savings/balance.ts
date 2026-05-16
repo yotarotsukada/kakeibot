@@ -12,7 +12,7 @@ export async function getSavingsData(deps: {
       deps.months.map(async (yearMonth) => {
         const normalWalletName = `${yearMonth}通常`;
         const [entries, budgets] = await Promise.all([
-          deps.storage.getLedgerEntriesByMonth(yearMonth),
+          deps.storage.getLedgerEntriesByWallet(normalWalletName),
           deps.storage.getBudgetRecords(normalWalletName),
         ]);
 
