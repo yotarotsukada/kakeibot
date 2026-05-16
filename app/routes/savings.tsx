@@ -13,6 +13,7 @@ import { getSavingsData } from "~/features/savings/balance";
 import { createStorage } from "~/infra/factory";
 import { requireAuth } from "~/lib/auth";
 import { buildMonthRange, getCurrentMonthJST } from "~/lib/date";
+import { cn } from "~/lib/utils";
 import type { Route } from "./+types/savings";
 
 export function meta(_args: Route.MetaArgs) {
@@ -25,7 +26,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const storage = createStorage(env);
 
   const currentMonth = getCurrentMonthJST();
-  // 過去6ヶ月 + 今月を表示対象にする
   const months = buildMonthRange(currentMonth).slice(-7);
 
   const savingsData = unwrap(await getSavingsData({ storage, months }));
@@ -44,15 +44,9 @@ export default function Savings() {
 
   return (
     <PageLayout>
-      {/* ヒーロー: 累計貯金額 */}
-      <Card className="rounded-3xl gap-0 py-0 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.74_0.13_28_/_0.25)] overflow-hidden">
-        <div
-          className="px-6 pt-5 pb-6"
-          style={{
-            background:
-              "linear-gradient(135deg, oklch(0.97 0.014 70) 0%, oklch(0.95 0.025 28) 100%)",
-          }}
-        >
+      {/* ヒーロー: 貯金合計 */}
+      <Card className="rounded-3xl gap-0 py-0 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.74_0.13_28_/_0.25)]">
+        <div className="px-6 pt-5 pb-6">
           <div className="flex items-center gap-2 mb-3">
             <div className="size-7 rounded-xl bg-primary/15 flex items-center justify-center">
               <HugeiconsIcon
@@ -73,7 +67,7 @@ export default function Savings() {
             {totalSavedAmount.toLocaleString()}
           </p>
           <p className="text-[11px] text-muted-foreground mt-2.5">
-            予算内に収まった月の節約合計
+            予算内に収まった月の、通常財布の節約合計
           </p>
         </div>
       </Card>
@@ -90,13 +84,7 @@ export default function Savings() {
         <>
           {/* 累計残高推移チャート */}
           <section className="space-y-3">
-            <div className="flex items-center gap-3 px-1">
-              <span className="h-px flex-1 bg-border" aria-hidden />
-              <span className="text-[11px] font-semibold text-muted-foreground/70 tracking-wider">
-                累計残高推移
-              </span>
-              <span className="h-px flex-1 bg-border" aria-hidden />
-            </div>
+            <SectionDivider label="累計残高推移" />
             <Card className="rounded-2xl gap-0 py-0 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.10)]">
               <div className="px-4 pt-4 pb-5">
                 <div className="flex items-baseline gap-2 mb-4">
@@ -104,9 +92,10 @@ export default function Savings() {
                     現在の残高
                   </p>
                   <p
-                    className={`font-numeric text-lg font-extrabold tabular-nums ${
-                      isPositiveBalance ? "text-foreground" : "text-destructive"
-                    }`}
+                    className={cn(
+                      "font-numeric text-lg font-extrabold tabular-nums",
+                      isPositiveBalance ? "text-foreground" : "text-destructive",
+                    )}
                   >
                     {isPositiveBalance ? "" : "−"}¥
                     {Math.abs(latestBalance).toLocaleString()}
@@ -119,17 +108,11 @@ export default function Savings() {
 
           {/* 月別貯金チャート */}
           <section className="space-y-3">
-            <div className="flex items-center gap-3 px-1">
-              <span className="h-px flex-1 bg-border" aria-hidden />
-              <span className="text-[11px] font-semibold text-muted-foreground/70 tracking-wider">
-                月別貯金額
-              </span>
-              <span className="h-px flex-1 bg-border" aria-hidden />
-            </div>
+            <SectionDivider label="月別貯金額" />
             <Card className="rounded-2xl gap-0 py-0 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.10)]">
               <div className="px-4 pt-4 pb-5">
                 <p className="text-[11px] text-muted-foreground/80 mb-4">
-                  予算 − 支出（プラスが節約）
+                  通常財布の 予算 − 支出（プラスが節約）
                 </p>
                 <MonthlySavingsChart months={months} />
               </div>
@@ -138,17 +121,23 @@ export default function Savings() {
 
           {/* 月別内訳 */}
           <section className="space-y-3">
-            <div className="flex items-center gap-3 px-1">
-              <span className="h-px flex-1 bg-border" aria-hidden />
-              <span className="text-[11px] font-semibold text-muted-foreground/70 tracking-wider">
-                月別内訳
-              </span>
-              <span className="h-px flex-1 bg-border" aria-hidden />
-            </div>
+            <SectionDivider label="月別内訳" />
             <MonthlyBreakdownList months={months} />
           </section>
         </>
       )}
     </PageLayout>
+  );
+}
+
+function SectionDivider({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 px-1">
+      <span className="h-px flex-1 bg-border" aria-hidden />
+      <span className="text-[11px] font-semibold text-muted-foreground/70 tracking-wider">
+        {label}
+      </span>
+      <span className="h-px flex-1 bg-border" aria-hidden />
+    </div>
   );
 }

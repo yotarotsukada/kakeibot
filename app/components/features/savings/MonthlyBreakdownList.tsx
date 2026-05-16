@@ -17,9 +17,8 @@ function formatMonth(yearMonth: string) {
   return `${year}年${Number(month)}月`;
 }
 
-/** 月別入金・支出・貯金の内訳リスト。 */
+/** 月別内訳リスト。新しい月が上。 */
 export function MonthlyBreakdownList({ months }: MonthlyBreakdownListProps) {
-  // 新しい月が上に来るよう逆順表示
   const sorted = [...months].reverse();
 
   return (
@@ -37,7 +36,7 @@ function MonthRow({ data }: { data: MonthlyBalanceData }) {
 
   return (
     <div className="bg-card rounded-2xl ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.10)] px-5 py-4">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-3.5">
         <p className="text-sm font-semibold text-foreground">
           {formatMonth(data.yearMonth)}
         </p>
@@ -64,11 +63,11 @@ function MonthRow({ data }: { data: MonthlyBalanceData }) {
         <MetricCell
           label="入金"
           value={data.totalIncome}
-          valueClass="text-emerald-700"
+          valueClass="text-primary"
         />
         <MetricCell
-          label="支出"
-          value={data.totalSpending}
+          label="通常支出"
+          value={data.normalWalletSpending}
           valueClass="text-foreground"
         />
         <MetricCell
@@ -78,6 +77,13 @@ function MonthRow({ data }: { data: MonthlyBalanceData }) {
           empty={!hasBudget}
         />
       </div>
+
+      {/* 特別財布の支出がある月は補足表示 */}
+      {data.totalSpending > data.normalWalletSpending && (
+        <p className="mt-2.5 text-[10px] text-muted-foreground/50">
+          特別財布含む全支出 ¥{data.totalSpending.toLocaleString()}
+        </p>
+      )}
     </div>
   );
 }
