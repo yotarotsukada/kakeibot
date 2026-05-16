@@ -111,6 +111,19 @@ describe("copyBudgetFromPrevMonth", () => {
     expect(budgets.find((b) => b.categoryName === "日用品費")?.amount).toBe(28000);
   });
 
+  it("前月の予算順序がそのまま引き継がれる", async () => {
+    const storage = createTestStorage({
+      budgets: [
+        { walletName: "2025-12通常", categoryName: "日用品費", amount: 28000 },
+        { walletName: "2025-12通常", categoryName: "食費", amount: 48000 },
+        { walletName: "2025-12通常", categoryName: "交通費", amount: 10000 },
+      ],
+    });
+    await copyBudgetFromPrevMonth("2026-01通常", "2026-01", { storage });
+    const budgets = await storage.getBudgetRecords("2026-01通常");
+    expect(budgets.map((b) => b.categoryName)).toEqual(["日用品費", "食費", "交通費"]);
+  });
+
   it("前月予算が存在しない場合は何もしない（no-op）", async () => {
     const storage = createTestStorage({ budgets: [] });
     const result = await copyBudgetFromPrevMonth("2026-01通常", "2026-01", { storage });
@@ -206,7 +219,7 @@ describe("getBudgetPageData", () => {
     expect(result.value.usedCategories).not.toContain("収入");
   });
 
-  it("予算記録は日本語カテゴリ名でソートされる", async () => {
+  it("予算記録はストレージの登録順で返される", async () => {
     const storage = createTestStorage({
       budgets: [
         { walletName: "2026-01通常", categoryName: "日用品費", amount: 30000 },
@@ -218,6 +231,6 @@ describe("getBudgetPageData", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const names = result.value.budgetRecords.map((b) => b.categoryName);
-    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, "ja")));
+    expect(names).toEqual(["日用品費", "食費", "交通費"]);
   });
 });
