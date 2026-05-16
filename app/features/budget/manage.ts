@@ -37,9 +37,6 @@ export async function getBudgetPageData(
       deps.storage.getLedgerEntriesByWallet(walletName),
     ]);
 
-    budgetRecords.sort((a, b) =>
-      a.categoryName.localeCompare(b.categoryName, "ja"),
-    );
     const totalBudget = budgetRecords.reduce((sum, r) => sum + r.amount, 0);
     const prevMonthBudgetExists = prevMonthRecords.length > 0;
     const usedCategories = [
@@ -129,11 +126,9 @@ export async function copyBudgetFromPrevMonth(
     const prevMonthWalletName = `${getPrevMonth(month)}通常`;
     const prevRecords =
       await deps.storage.getBudgetRecords(prevMonthWalletName);
-    await Promise.all(
-      prevRecords.map((r) =>
-        deps.storage.upsertBudgetRecord({ ...r, walletName }),
-      ),
-    );
+    for (const r of prevRecords) {
+      await deps.storage.upsertBudgetRecord({ ...r, walletName });
+    }
     return ok(undefined);
   } catch (e) {
     return err(wrapUnknownError(e));
