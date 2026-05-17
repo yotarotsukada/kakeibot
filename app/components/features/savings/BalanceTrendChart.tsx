@@ -57,7 +57,7 @@ export function CumulativeBalanceChart({ months }: BalanceTrendChartProps) {
 
   return (
     <ResponsiveContainer width="100%" height={180}>
-      <AreaChart data={data} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
+      <AreaChart data={data} margin={{ top: 8, right: 4, left: 0, bottom: 0 }} style={{ outline: "none" }}>
         <defs>
           <linearGradient id="balanceGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor={COLOR_PRIMARY} stopOpacity={0.2} />
@@ -87,7 +87,7 @@ export function CumulativeBalanceChart({ months }: BalanceTrendChartProps) {
           formatter={(value) => [`¥${Number(value).toLocaleString()}`, "累計残高"]}
           labelStyle={{ fontSize: 12, color: COLOR_FG, fontWeight: 600 }}
           contentStyle={tooltipContentStyle}
-          cursor={{ stroke: COLOR_BORDER, strokeWidth: 1.5 }}
+          cursor={{ stroke: COLOR_BORDER, strokeWidth: 1, strokeDasharray: "3 3" }}
         />
         {min < 0 && (
           <ReferenceLine y={0} stroke={COLOR_BORDER} strokeWidth={1} />
@@ -115,7 +115,7 @@ export function MonthlySavingsChart({ months }: BalanceTrendChartProps) {
 
   return (
     <ResponsiveContainer width="100%" height={160}>
-      <BarChart data={data} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
+      <BarChart data={data} margin={{ top: 8, right: 4, left: 0, bottom: 0 }} style={{ outline: "none" }}>
         <CartesianGrid
           strokeDasharray="3 3"
           stroke={COLOR_BORDER}
@@ -144,7 +144,7 @@ export function MonthlySavingsChart({ months }: BalanceTrendChartProps) {
           }}
           labelStyle={{ fontSize: 12, color: COLOR_FG, fontWeight: 600 }}
           contentStyle={tooltipContentStyle}
-          cursor={{ fill: `${COLOR_MUTED_FG}15` }}
+          cursor={false}
         />
         <ReferenceLine y={0} stroke={COLOR_BORDER} strokeWidth={1} />
         <Bar dataKey="貯金" radius={[4, 4, 2, 2]} maxBarSize={40}>
