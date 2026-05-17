@@ -75,7 +75,7 @@ async function processMessage(
     if (msg.replyToken) {
       await lineClient.reply(
         msg.replyToken,
-        `✅ 登録しました\n${entry.category}: ¥${entry.amount.toLocaleString()}`,
+        `✅ 登録しました\n${formatEntryDate(entry.date)} ${entry.category}: ¥${entry.amount.toLocaleString()}\nhttps://kakeibot.yotarotsukada.workers.dev/calendar`,
       );
     }
 
@@ -113,6 +113,11 @@ async function processMessage(
       );
     }
   }
+}
+
+function formatEntryDate(date: string): string {
+  const [y, m, d] = date.split("-");
+  return `${y}/${Number(m)}/${Number(d)}`;
 }
 
 function getTodayJST(): string {
