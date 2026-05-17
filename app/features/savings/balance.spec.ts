@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { getSavingsData } from "~/features/savings/balance";
 import { createTestStorage } from "../../../test/helpers/storage";
+import type { LedgerEntry } from "~/domain/ledger/entry";
+
+type StoredEntry = LedgerEntry & { id: string };
 
 function entry(
   id: string,
@@ -8,7 +11,7 @@ function entry(
   type: "入金" | "支出",
   amount: number,
   wallet: string,
-): Parameters<typeof createTestStorage>[0]["ledger"][number] {
+): StoredEntry {
   return { id, date, type, amount, wallet, actor: "共同", category: "食費", shouldSettle: true, memo: "" };
 }
 
