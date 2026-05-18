@@ -105,7 +105,7 @@ export function MonthCalendar({
               type="button"
               onClick={() => onDateSelect(cell.dateStr)}
               className={cn(
-                "h-[72px] flex flex-col items-center pt-1.5 gap-1",
+                "h-[72px] flex flex-col items-center pt-1.5 gap-1 overflow-hidden",
                 "border-b border-r border-border/20",
                 "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
                 isSelected
@@ -144,7 +144,7 @@ export function MonthCalendar({
                   </span>
                 )}
                 {isSavingDay && (
-                  <CatSavingsIcon size={13} className="text-primary/70" />
+                  <CatSavingsIcon size={13} className="text-primary/70 -mt-0.5" />
                 )}
               </div>
             </button>
