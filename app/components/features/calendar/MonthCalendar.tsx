@@ -105,7 +105,7 @@ export function MonthCalendar({
               type="button"
               onClick={() => onDateSelect(cell.dateStr)}
               className={cn(
-                "h-[72px] flex flex-col items-center justify-between pt-1.5 pb-2",
+                "h-[72px] flex flex-col items-center pt-1.5 gap-1",
                 "border-b border-r border-border/20",
                 "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
                 isSelected
