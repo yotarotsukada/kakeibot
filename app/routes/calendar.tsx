@@ -430,6 +430,9 @@ function IncomeRow({ entry }: { entry: IncomeEntryWithId }) {
           <span className="text-[13px] font-medium rounded-lg border border-border/40 bg-muted px-2 py-0.5 text-foreground/80">
             入金
           </span>
+          <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full border border-border/40 text-muted-foreground/70">
+            {entry.actor}
+          </span>
         </div>
         {entry.memo && (
           <p className="text-[11px] text-muted-foreground/65 truncate pl-4">

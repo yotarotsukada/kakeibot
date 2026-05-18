@@ -48,13 +48,13 @@ export async function getSavingsData(deps: {
       storage.getWallets(),
     ]);
 
-    // 1. 推定残高: 全入金 − 全支出（特別財布含む全期間）
+    // 1. 推定残高: 全入金 − 共同支出（立替支出は個人の持ち出しのため除外）
     const estimatedBalance =
       allEntries
         .filter((e) => e.type === "入金")
         .reduce((sum, e) => sum + e.amount, 0) -
       allEntries
-        .filter((e) => e.type === "支出")
+        .filter((e) => e.type === "支出" && e.actor === "共同")
         .reduce((sum, e) => sum + e.amount, 0);
 
     // 2. 通常財布（YYYY-MM通常）の年月一覧を取得

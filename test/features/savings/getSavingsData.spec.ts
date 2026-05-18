@@ -19,14 +19,14 @@ describe("getSavingsData", () => {
     expect(result.value.monthlyBreakdowns).toHaveLength(0);
   });
 
-  it("推定残高: 全入金合計 − 全支出合計（特別財布含む）", async () => {
+  it("推定残高: 全入金合計 − 共同支出合計（特別財布含む・立替除外）", async () => {
     const storage = createTestStorage({
       wallets: [
         { name: NORMAL_2026_05, type: "月次", settled: false },
         { name: SPECIAL, type: "特別", settled: false },
       ],
       ledger: [
-        { id: "i1", date: "2026-05-01", type: "入金", amount: 200000, actor: "共同", memo: "生活費" },
+        { id: "i1", date: "2026-05-01", type: "入金", amount: 200000, actor: "A", memo: "生活費" },
         { id: "s1", date: "2026-05-10", type: "支出", amount: 50000, actor: "共同", category: "食費", wallet: NORMAL_2026_05, shouldSettle: true, memo: "" },
         { id: "s2", date: "2026-05-15", type: "支出", amount: 80000, actor: "共同", category: "一括", wallet: SPECIAL, shouldSettle: true, memo: "旅費" },
       ],
@@ -37,8 +37,27 @@ describe("getSavingsData", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
-    // 200000 − (50000 + 80000) = 70000
+    // 200000 − (50000 + 80000) = 70000（共同支出のみ）
     expect(result.value.estimatedBalance).toBe(70000);
+  });
+
+  it("推定残高: 立替支出（actor !== 共同）は除外される", async () => {
+    const storage = createTestStorage({
+      wallets: [{ name: NORMAL_2026_05, type: "月次", settled: false }],
+      ledger: [
+        { id: "i1", date: "2026-05-01", type: "入金", amount: 200000, actor: "A", memo: "生活費" },
+        { id: "s1", date: "2026-05-10", type: "支出", amount: 50000, actor: "共同", category: "食費", wallet: NORMAL_2026_05, shouldSettle: true, memo: "" },
+        { id: "s2", date: "2026-05-15", type: "支出", amount: 30000, actor: "A", category: "日用品費", wallet: NORMAL_2026_05, shouldSettle: true, memo: "立替" },
+      ],
+    });
+
+    const result = await getSavingsData({ storage });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    // 200000 − 50000(共同のみ) = 150000（立替の30000は除外）
+    expect(result.value.estimatedBalance).toBe(150000);
   });
 
   it("月別節約額: 通常財布の予算 − 通常財布の支出（特別財布の支出を除外）", async () => {

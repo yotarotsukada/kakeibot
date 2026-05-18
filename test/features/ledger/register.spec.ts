@@ -62,7 +62,7 @@ describe("registerLedgerEntries", () => {
     if (entry.type !== "入金") return;
 
     expect(entry.amount).toBe(200000);
-    expect(entry.actor).toBe("共同");
+    expect(entry.actor).toBe("A"); // 入金は送信者のユーザー名を記録
     // IncomeEntry には wallet / category / shouldSettle が存在しない
     expect("wallet" in entry).toBe(false);
     expect("category" in entry).toBe(false);

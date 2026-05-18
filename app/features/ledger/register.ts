@@ -48,12 +48,11 @@ async function processMessage(
   { lineClient, parser, storage, appBaseUrl }: LedgerDeps,
 ): Promise<void> {
   try {
-    // 1. ユーザーマスタで存在確認（認証）。元帳に書き込む actor は共同に統一する
+    // 1. ユーザーマスタで存在確認（認証）
     const registeredActor = await storage.findActorByLineUserId(msg.userId);
     if (!registeredActor) {
       throw new UnknownUserError(msg.userId);
     }
-    const actor = "共同";
 
     // 2. 画像取得（画像メッセージの場合）
     let imageBase64: string | undefined;
@@ -67,12 +66,14 @@ async function processMessage(
     const parsed = await parser.parse({
       text: msg.text,
       imageBase64,
-      actor,
+      actor: "共同",
       today: getTodayJST(),
     });
 
-    // 4. ParsedEntry → LedgerEntry（wallet, shouldSettle を付与）
-    const entry = toLedgerEntry(parsed, actor);
+    // 4. ParsedEntry → LedgerEntry
+    // 入金: 誰が振り込んだかを記録するため registeredActor を使う
+    // 支出: 元帳上は常に共同に統一する
+    const entry = toLedgerEntry(parsed, registeredActor);
 
     // 5. 元帳に追記
     await storage.appendLedgerEntries([entry]);
@@ -87,9 +88,11 @@ async function processMessage(
     }
 
     const entryLabel =
-      entry.type === "入金" ? "入金" : `${entry.category} (${entry.wallet})`;
+      entry.type === "入金"
+        ? `入金 (${entry.actor})`
+        : `${entry.category} (${entry.wallet})`;
     console.log(
-      `[Ledger] ✅ 登録 (${msg.userId} / actor: ${actor}) ${entryLabel} ¥${entry.amount}`,
+      `[Ledger] ✅ 登録 (${msg.userId} / actor: ${entry.actor}) ${entryLabel} ¥${entry.amount}`,
     );
   } catch (err) {
     if (err instanceof UnknownUserError) {
@@ -145,7 +148,7 @@ function getTodayJST(): string {
  * - wallet: AI が返却した date の YYYY-MM から「YYYY-MM通常」を生成。
  * - shouldSettle: 常に true。
  */
-function toLedgerEntry(parsed: ParsedEntry, actor: string): LedgerEntry {
+function toLedgerEntry(parsed: ParsedEntry, registeredActor: string): LedgerEntry {
   const dateStr = parsed.date || getTodayJST();
 
   if (parsed.type === "入金") {
@@ -153,7 +156,7 @@ function toLedgerEntry(parsed: ParsedEntry, actor: string): LedgerEntry {
       type: "入金",
       date: dateStr,
       amount: parsed.amount,
-      actor,
+      actor: registeredActor, // 誰が入金したかを記録
       memo: parsed.memo,
     };
     return entry;
@@ -164,7 +167,7 @@ function toLedgerEntry(parsed: ParsedEntry, actor: string): LedgerEntry {
     type: "支出",
     date: dateStr,
     amount: parsed.amount,
-    actor,
+    actor: "共同", // 支出は元帳上常に共同
     memo: parsed.memo,
     wallet: `${year}-${month}通常`,
     category: parsed.category,
