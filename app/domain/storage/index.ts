@@ -7,6 +7,8 @@ import type { BudgetRecord, Wallet } from "~/domain/budget/budget";
 import type {
   IncomeEntry,
   LedgerEntry,
+  SavingsAllocationEntry,
+  SavingsDepositEntry,
   SpendingEntry,
 } from "~/domain/ledger/entry";
 
@@ -29,6 +31,12 @@ export type SpendingEntryWithId = SpendingEntry & { id: string };
 
 /** ストレージから読み出した入金エントリ（ID付き）。 */
 export type IncomeEntryWithId = IncomeEntry & { id: string };
+
+/** ストレージから読み出した積立エントリ（ID付き）。 */
+export type SavingsDepositEntryWithId = SavingsDepositEntry & { id: string };
+
+/** ストレージから読み出した配分エントリ（ID付き）。 */
+export type SavingsAllocationEntryWithId = SavingsAllocationEntry & { id: string };
 
 /** ストレージから読み出した元帳エントリ（ID付き）。 */
 export type LedgerEntryWithId = LedgerEntry & { id: string };

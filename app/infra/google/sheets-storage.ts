@@ -756,7 +756,7 @@ function generateTransactionId(): string {
 
 /**
  * シート行（A:I）をドメイン型に変換するヘルパー。
- * type 列（index 2）で IncomeEntry / SpendingEntry を判別する。
+ * type 列（index 2）で IncomeEntry / SpendingEntry / SavingsDepositEntry / SavingsAllocationEntry を判別する。
  */
 function rowToLedgerEntryWithId(row: string[]): LedgerEntryWithId {
   if (row[2] === "入金") {
@@ -764,6 +764,26 @@ function rowToLedgerEntryWithId(row: string[]): LedgerEntryWithId {
       id: row[0],
       date: row[1],
       type: "入金",
+      amount: Number(row[3]) || 0,
+      actor: row[4],
+      memo: row[8] ?? "",
+    };
+  }
+  if (row[2] === "積立") {
+    return {
+      id: row[0],
+      date: row[1],
+      type: "積立",
+      amount: Number(row[3]) || 0,
+      actor: row[4],
+      memo: row[8] ?? "",
+    };
+  }
+  if (row[2] === "配分") {
+    return {
+      id: row[0],
+      date: row[1],
+      type: "配分",
       amount: Number(row[3]) || 0,
       actor: row[4],
       memo: row[8] ?? "",

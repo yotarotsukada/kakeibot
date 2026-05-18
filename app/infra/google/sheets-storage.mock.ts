@@ -246,6 +246,48 @@ const SEED_LEDGER: StoredEntry[] = [
     shouldSettle: true,
     memo: "3月日用品",
   },
+  // 積立エントリ（貯金プール追加）
+  {
+    transactionId: "seed-savings-001",
+    date: "2026-01-01",
+    type: "積立",
+    amount: 500000,
+    actor: "共同",
+    memo: "初期残高",
+  },
+  {
+    transactionId: "seed-savings-002",
+    date: "2026-03-01",
+    type: "積立",
+    amount: 30000,
+    actor: "共同",
+    memo: "3月分積立",
+  },
+  {
+    transactionId: "seed-savings-003",
+    date: "2026-04-01",
+    type: "積立",
+    amount: 30000,
+    actor: "共同",
+    memo: "4月分積立",
+  },
+  {
+    transactionId: "seed-savings-004",
+    date: "2026-05-01",
+    type: "積立",
+    amount: 30000,
+    actor: "共同",
+    memo: "5月分積立",
+  },
+  // 配分エントリ（特別財布への割当）
+  {
+    transactionId: "seed-savings-005",
+    date: "2026-04-30",
+    type: "配分",
+    amount: 200000,
+    actor: "共同",
+    memo: "沖縄旅行費用配分",
+  },
 ];
 
 export class MockStorage implements Storage {
@@ -270,6 +312,10 @@ export class MockStorage implements Storage {
       if (e.type === "支出") {
         console.log(
           `[MockStorage] 📝 ${SHEET_NAMES.LEDGER}: ${id} | ${e.date} | 支出 | ¥${e.amount} | ${e.actor} | ${e.category} | ${e.wallet} | ${e.memo}`,
+        );
+      } else if (e.type === "積立" || e.type === "配分") {
+        console.log(
+          `[MockStorage] 📝 ${SHEET_NAMES.LEDGER}: ${id} | ${e.date} | ${e.type} | ¥${e.amount} | ${e.actor} | ${e.memo}`,
         );
       } else {
         console.log(

@@ -1,4 +1,5 @@
-import { useLoaderData } from "react-router";
+import { useEffect, useState } from "react";
+import { useFetcher, useLoaderData } from "react-router";
 import {
   Bar,
   Cell,
@@ -12,6 +13,7 @@ import {
 } from "recharts";
 import { Card } from "~/components/ui/card";
 import { PageLayout } from "~/components/layout/PageLayout";
+import type { SavingsDepositEntry, SavingsAllocationEntry } from "~/domain/ledger/entry";
 import { unwrap } from "~/domain/result";
 import { getSavingsData, type MonthlyBreakdown } from "~/features/savings/getSavingsData";
 import { createStorage } from "~/infra/factory";
@@ -23,12 +25,45 @@ export function meta(_args: Route.MetaArgs) {
   return [{ title: "ふたりの家計簿 | 貯金" }];
 }
 
+export async function action({ request, context }: Route.ActionArgs) {
+  const { env } = (context as { cloudflare: { env: Env } }).cloudflare;
+  await requireAuth(request, env);
+  const formData = await request.formData();
+  if (formData.get("intent") !== "addSavingsEntry") {
+    return { ok: false };
+  }
+  const rawType = String(formData.get("type"));
+  if (rawType !== "積立" && rawType !== "配分") {
+    return { ok: false };
+  }
+  const rawAmount = Number(formData.get("amount"));
+  if (!rawAmount || rawAmount <= 0) {
+    return { ok: false };
+  }
+  const storage = createStorage(env);
+  const baseFields = {
+    date: String(formData.get("date")),
+    amount: Math.floor(rawAmount),
+    actor: "共同",
+    memo: String(formData.get("memo")),
+  };
+  const entry: SavingsDepositEntry | SavingsAllocationEntry =
+    rawType === "積立"
+      ? { type: "積立", ...baseFields }
+      : { type: "配分", ...baseFields };
+  await storage.appendLedgerEntries([entry]);
+  return { ok: true };
+}
+
 export async function loader({ request, context }: Route.LoaderArgs) {
   const { env } = (context as { cloudflare: { env: Env } }).cloudflare;
   await requireAuth(request, env);
   const storage = createStorage(env);
   const currentMonth = getCurrentMonthJST();
-  return { ...unwrap(await getSavingsData({ storage })), currentMonth };
+  const now = new Date();
+  now.setUTCHours(now.getUTCHours() + 9);
+  const today = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
+  return { ...unwrap(await getSavingsData({ storage })), currentMonth, today };
 }
 
 // ---- カラー定数 -------------------------------------------------------------
@@ -60,6 +95,49 @@ function HeroCard({ label, amount }: { label: string; amount: number }) {
           <span className="text-2xl mr-0.5 align-baseline opacity-70">¥</span>
           {Math.abs(amount).toLocaleString()}
         </p>
+      </div>
+    </Card>
+  );
+}
+
+function PoolHeroCard({
+  amount,
+  totalSavings,
+  totalDeposits,
+  totalAllocations,
+}: {
+  amount: number;
+  totalSavings: number;
+  totalDeposits: number;
+  totalAllocations: number;
+}) {
+  const isNegative = amount < 0;
+  const hasSub = totalSavings !== 0 || totalDeposits !== 0 || totalAllocations !== 0;
+  return (
+    <Card className="rounded-3xl gap-0 py-0 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.74_0.13_28_/_0.25)]">
+      <div className="px-6 py-5">
+        <p className="text-[11px] font-medium text-muted-foreground/80 tracking-wide mb-1">
+          貯金プール合計
+        </p>
+        <p
+          className={[
+            "font-numeric tabular-nums font-extrabold text-[2rem] leading-none tracking-tight",
+            isNegative ? "text-destructive" : "text-foreground",
+          ].join(" ")}
+        >
+          {isNegative && (
+            <span className="mr-0.5 align-baseline opacity-80">−</span>
+          )}
+          <span className="text-2xl mr-0.5 align-baseline opacity-70">¥</span>
+          {Math.abs(amount).toLocaleString()}
+        </p>
+        {hasSub && (
+          <p className="text-[11px] text-muted-foreground/60 mt-1.5 tabular-nums">
+            節約 ¥{totalSavings.toLocaleString()}
+            {totalDeposits > 0 && ` ＋ 積立 ¥${totalDeposits.toLocaleString()}`}
+            {totalAllocations > 0 && ` − 配分 ¥${totalAllocations.toLocaleString()}`}
+          </p>
+        )}
       </div>
     </Card>
   );
@@ -119,8 +197,16 @@ const EMPTY_BREAKDOWN = (yearMonth: string): MonthlyBreakdown => ({
 // ---- ページ -----------------------------------------------------------------
 
 export default function SavingsPage() {
-  const { estimatedBalance, totalSavings, monthlyBreakdowns, currentMonth } =
-    useLoaderData<typeof loader>();
+  const {
+    estimatedBalance,
+    totalSavings,
+    savingsPoolTotal,
+    deposits,
+    allocations,
+    monthlyBreakdowns,
+    currentMonth,
+    today,
+  } = useLoaderData<typeof loader>();
 
   const breakdownByMonth = Object.fromEntries(
     monthlyBreakdowns.map((b) => [b.yearMonth, b]),
@@ -129,6 +215,13 @@ export default function SavingsPage() {
   const chartData = buildRecentMonths(currentMonth, 6)
     .reverse()
     .map((m) => breakdownByMonth[m] ?? EMPTY_BREAKDOWN(m));
+
+  const totalDeposits = deposits.reduce((sum, e) => sum + e.amount, 0);
+  const totalAllocations = allocations.reduce((sum, e) => sum + e.amount, 0);
+
+  const poolEntries = [...deposits, ...allocations].sort((a, b) =>
+    b.date.localeCompare(a.date),
+  );
 
   return (
     <PageLayout>
@@ -140,8 +233,13 @@ export default function SavingsPage() {
         </p>
       </div>
 
-      {/* ① 累計貯金額（メイン） */}
-      <HeroCard label="累計貯金額" amount={totalSavings} />
+      {/* ① 貯金プール合計（メイン） */}
+      <PoolHeroCard
+        amount={savingsPoolTotal}
+        totalSavings={totalSavings}
+        totalDeposits={totalDeposits}
+        totalAllocations={totalAllocations}
+      />
 
       {/* ② 口座残高（サブ） */}
       <HeroCard label="口座残高" amount={estimatedBalance} />
@@ -227,7 +325,158 @@ export default function SavingsPage() {
           </div>
         </Card>
       </section>
+
+      {/* ④ 積立・配分 */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-3 px-1">
+          <span className="h-px flex-1 bg-border" aria-hidden />
+          <span className="text-[11px] font-semibold text-muted-foreground/70 tracking-wider">
+            積立・配分
+          </span>
+          <span className="h-px flex-1 bg-border" aria-hidden />
+        </div>
+        <Card className="rounded-3xl gap-0 py-0 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.10)]">
+          <div className="px-5 pt-4 pb-5 space-y-1">
+            {poolEntries.length > 0 && (
+              <div className="mb-3 divide-y divide-border/40">
+                {poolEntries.map((entry) => (
+                  <PoolOperationRow key={entry.id} entry={entry} />
+                ))}
+              </div>
+            )}
+            <SavingsEntryForm today={today} />
+          </div>
+        </Card>
+      </section>
     </PageLayout>
+  );
+}
+
+// ---- 積立・配分 行コンポーネント -------------------------------------------
+
+type PoolEntry = { id: string; date: string; type: "積立" | "配分"; amount: number; memo: string };
+
+function PoolOperationRow({ entry }: { entry: PoolEntry }) {
+  const isDeposit = entry.type === "積立";
+  const [, m, d] = entry.date.split("-");
+  return (
+    <div className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+      <span className="text-[11px] text-muted-foreground/60 w-9 shrink-0 tabular-nums">
+        {parseInt(m)}/{parseInt(d)}
+      </span>
+      <span
+        className="font-numeric tabular-nums text-sm font-semibold shrink-0 w-28"
+        style={{ color: isDeposit ? "oklch(0.60 0.14 160)" : "oklch(0.66 0.15 25)" }}
+      >
+        {isDeposit ? "+" : "−"}¥{entry.amount.toLocaleString()}
+      </span>
+      <span className="text-sm text-foreground/70 flex-1 truncate">{entry.memo}</span>
+    </div>
+  );
+}
+
+// ---- 積立・配分 追加フォーム ------------------------------------------------
+
+function SavingsEntryForm({ today }: { today: string }) {
+  const fetcher = useFetcher();
+  const [entryType, setEntryType] = useState<"積立" | "配分">("積立");
+  const [amount, setAmount] = useState("");
+  const [memo, setMemo] = useState("");
+  const [date, setDate] = useState(today);
+
+  const isSubmitting = fetcher.state !== "idle";
+
+  useEffect(() => {
+    if (fetcher.state === "idle" && fetcher.data != null) {
+      setAmount("");
+      setMemo("");
+    }
+  }, [fetcher.state, fetcher.data]);
+
+  const isDirty = amount !== "";
+
+  return (
+    <fetcher.Form method="post" className="space-y-3 pt-1">
+      <input type="hidden" name="intent" value="addSavingsEntry" />
+      <input type="hidden" name="type" value={entryType} />
+
+      {/* 種別トグル */}
+      <div className="flex gap-2">
+        {(["積立", "配分"] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setEntryType(t)}
+            className="px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
+            style={
+              entryType === t
+                ? {
+                    backgroundColor:
+                      t === "積立"
+                        ? "oklch(0.94 0.05 160)"
+                        : "oklch(0.94 0.05 25)",
+                    color:
+                      t === "積立"
+                        ? "oklch(0.45 0.14 160)"
+                        : "oklch(0.50 0.15 25)",
+                  }
+                : { backgroundColor: "oklch(0.95 0.005 60)", color: "oklch(0.55 0.02 30)" }
+            }
+          >
+            {t === "積立" ? "積立（＋）" : "配分（－）"}
+          </button>
+        ))}
+      </div>
+
+      {/* 金額 */}
+      <div className="relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
+          ¥
+        </span>
+        <input
+          type="number"
+          name="amount"
+          min={1}
+          step={1}
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          className="w-full pl-7 pr-3 py-2 rounded-xl border border-input bg-background text-sm tabular-nums"
+          placeholder="金額を入力"
+          required
+        />
+      </div>
+
+      {/* メモ */}
+      <input
+        type="text"
+        name="memo"
+        value={memo}
+        onChange={(e) => setMemo(e.target.value)}
+        className="w-full px-3 py-2 rounded-xl border border-input bg-background text-sm"
+        placeholder="メモ（例: 精算返却）"
+      />
+
+      {/* 日付 */}
+      <input
+        type="date"
+        name="date"
+        value={date}
+        onChange={(e) => setDate(e.target.value)}
+        className="w-full px-3 py-2 rounded-xl border border-input bg-background text-sm"
+      />
+
+      {/* 保存ボタン（dirty-state-aware） */}
+      {isDirty && (
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full py-2.5 rounded-xl text-sm font-semibold transition-opacity disabled:opacity-60"
+          style={{ backgroundColor: "oklch(0.74 0.13 28)", color: "oklch(0.99 0.005 60)" }}
+        >
+          {isSubmitting ? "保存中..." : "保存する"}
+        </button>
+      )}
+    </fetcher.Form>
   );
 }
 

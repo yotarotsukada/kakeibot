@@ -83,14 +83,18 @@ async function processMessage(
       const replyText =
         entry.type === "入金"
           ? `✅ 入金を登録しました\n${entry.date} ¥${entry.amount.toLocaleString()}\n${appBaseUrl}/savings`
-          : `✅ 登録しました\n${entry.date} ${entry.category}: ¥${entry.amount.toLocaleString()}\n${appBaseUrl}/calendar`;
+          : entry.type === "支出"
+            ? `✅ 登録しました\n${entry.date} ${entry.category}: ¥${entry.amount.toLocaleString()}\n${appBaseUrl}/calendar`
+            : `✅ 登録しました\n${entry.date} ¥${entry.amount.toLocaleString()}`;
       await lineClient.reply(msg.replyToken, replyText);
     }
 
     const entryLabel =
       entry.type === "入金"
         ? `入金 (${entry.actor})`
-        : `${entry.category} (${entry.wallet})`;
+        : entry.type === "支出"
+          ? `${entry.category} (${entry.wallet})`
+          : `${entry.type} (${entry.actor})`;
     console.log(
       `[Ledger] ✅ 登録 (${msg.userId} / actor: ${entry.actor}) ${entryLabel} ¥${entry.amount}`,
     );

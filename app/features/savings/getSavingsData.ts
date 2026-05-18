@@ -13,7 +13,11 @@ import type { AppError } from "~/domain/errors";
 import { wrapUnknownError } from "~/domain/errors";
 import type { SpendingEntry } from "~/domain/ledger/entry";
 import { err, ok, type Result } from "~/domain/result";
-import type { Storage } from "~/domain/storage";
+import type {
+  SavingsAllocationEntryWithId,
+  SavingsDepositEntryWithId,
+  Storage,
+} from "~/domain/storage";
 
 export type MonthlyBreakdown = {
   /** "YYYY-MM" 形式 */
@@ -33,6 +37,12 @@ export type SavingsData = {
   estimatedBalance: number;
   /** 累計貯金額: Σ月別節約額（通常財布のみ・全期間） */
   totalSavings: number;
+  /** 貯金プール合計: totalSavings + Σ積立 − Σ配分 */
+  savingsPoolTotal: number;
+  /** 積立エントリ一覧（新しい日付順） */
+  deposits: SavingsDepositEntryWithId[];
+  /** 配分エントリ一覧（新しい日付順） */
+  allocations: SavingsAllocationEntryWithId[];
   /** 月別内訳（新しい月が先頭） */
   monthlyBreakdowns: MonthlyBreakdown[];
 };
@@ -103,7 +113,19 @@ export async function getSavingsData(deps: {
       0,
     );
 
-    return ok({ estimatedBalance, totalSavings, monthlyBreakdowns });
+    const deposits = allEntries
+      .filter((e): e is SavingsDepositEntryWithId => e.type === "積立")
+      .sort((a, b) => b.date.localeCompare(a.date));
+
+    const allocations = allEntries
+      .filter((e): e is SavingsAllocationEntryWithId => e.type === "配分")
+      .sort((a, b) => b.date.localeCompare(a.date));
+
+    const totalDeposits = deposits.reduce((sum, e) => sum + e.amount, 0);
+    const totalAllocations = allocations.reduce((sum, e) => sum + e.amount, 0);
+    const savingsPoolTotal = totalSavings + totalDeposits - totalAllocations;
+
+    return ok({ estimatedBalance, totalSavings, savingsPoolTotal, deposits, allocations, monthlyBreakdowns });
   } catch (e) {
     return err(wrapUnknownError(e));
   }
