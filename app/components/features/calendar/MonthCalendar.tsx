@@ -85,7 +85,7 @@ export function MonthCalendar({
             return (
               <div
                 key={cell.key}
-                className="h-[60px] border-b border-r border-border/20"
+                className="h-[72px] border-b border-r border-border/20"
               />
             );
           }
