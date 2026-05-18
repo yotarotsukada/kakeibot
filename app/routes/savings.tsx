@@ -80,6 +80,7 @@ const COLOR_SAVINGS_POS = "oklch(0.74 0.13 28)";   // coral primary
 const COLOR_SAVINGS_NEG = "oklch(0.66 0.15 25)";   // destructive
 const COLOR_BUDGET      = "oklch(0.72 0.10 230)";  // sora blue
 const COLOR_SPENDING    = "oklch(0.78 0.11 60)";   // apricot
+const COLOR_DEPOSIT     = "oklch(0.60 0.14 160)";  // deposit teal
 
 // ---- ヒーローカード ----------------------------------------------------------
 
@@ -121,6 +122,17 @@ function PoolHeroCard({
 }) {
   const isNegative = amount < 0;
   const hasSub = totalSavings !== 0 || totalDeposits !== 0 || totalAllocations !== 0;
+
+  // 配分は節約から優先して差し引く
+  const allocFromSavings = Math.min(totalAllocations, Math.max(totalSavings, 0));
+  const remainingAlloc = Math.max(totalAllocations - allocFromSavings, 0);
+  const adjSavings = totalSavings - allocFromSavings;
+  const adjDeposits = totalDeposits - remainingAlloc;
+  const subParts = [
+    adjDeposits > 0 ? `積立 ¥${adjDeposits.toLocaleString()}` : "",
+    adjSavings > 0 ? `節約 ¥${adjSavings.toLocaleString()}` : "",
+  ].filter(Boolean).join(" ＋ ");
+
   return (
     <Card className="rounded-3xl gap-0 py-0 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.74_0.13_28_/_0.25)]">
       <div className="px-6 py-5">
@@ -139,11 +151,9 @@ function PoolHeroCard({
           <span className="text-2xl mr-0.5 align-baseline opacity-70">¥</span>
           {Math.abs(amount).toLocaleString()}
         </p>
-        {hasSub && (
+        {hasSub && subParts && (
           <p className="text-[11px] text-muted-foreground/60 mt-1.5 tabular-nums">
-            節約 ¥{totalSavings.toLocaleString()}
-            {totalDeposits > 0 && ` ＋ 積立 ¥${totalDeposits.toLocaleString()}`}
-            {totalAllocations > 0 && ` − 配分 ¥${totalAllocations.toLocaleString()}`}
+            {subParts}
           </p>
         )}
       </div>
@@ -184,6 +194,45 @@ function ChartTooltip({
   );
 }
 
+// ---- 貯金総額推移グラフ用 Tooltip -------------------------------------------
+
+type CumulativePoint = {
+  yearMonth: string;
+  savingsPart: number;
+  depositPart: number;
+  total: number;
+};
+
+function CumulativeChartTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: { payload: CumulativePoint }[];
+}) {
+  if (!active || !payload?.length) return null;
+  const d = payload[0].payload;
+  const isEmpty = d.total === 0 && d.savingsPart === 0 && d.depositPart === 0;
+  return (
+    <div className="bg-card border border-border/40 rounded-xl px-3 py-2.5 shadow-[0_2px_12px_-4px_oklch(0.30_0.02_30_/_0.15)] text-[12px] space-y-1 min-w-[120px]">
+      <p className="font-semibold text-foreground">{d.yearMonth}</p>
+      {isEmpty ? (
+        <p className="text-muted-foreground/60">データなし</p>
+      ) : (
+        <>
+          <div className="space-y-0.5 text-muted-foreground">
+            {d.savingsPart > 0 && <p>節約 ¥{d.savingsPart.toLocaleString()}</p>}
+            {d.depositPart > 0 && <p>積立 ¥{d.depositPart.toLocaleString()}</p>}
+          </div>
+          <p className="font-semibold pt-0.5 border-t border-border/40 text-primary">
+            合計 ¥{d.total.toLocaleString()}
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ---- 直近 N ヶ月リスト（新しい月が先頭）--------------------------------------
 
 function buildRecentMonths(currentMonth: string, count: number): string[] {
@@ -201,6 +250,32 @@ const EMPTY_BREAKDOWN = (yearMonth: string): MonthlyBreakdown => ({
   totalBudget: 0,
   savedAmount: 0,
 });
+
+function buildCumulativeData(
+  months: string[],
+  allBreakdowns: MonthlyBreakdown[],
+  deposits: { date: string; amount: number }[],
+  allocations: { date: string; amount: number }[],
+): CumulativePoint[] {
+  return months.map((month) => {
+    const cumSavings = allBreakdowns
+      .filter((b) => b.yearMonth <= month)
+      .reduce((sum, b) => sum + b.savedAmount, 0);
+    const cumDeposits = deposits
+      .filter((d) => d.date.slice(0, 7) <= month)
+      .reduce((sum, d) => sum + d.amount, 0);
+    const cumAllocations = allocations
+      .filter((a) => a.date.slice(0, 7) <= month)
+      .reduce((sum, a) => sum + a.amount, 0);
+    const total = cumSavings + cumDeposits - cumAllocations;
+    // 配分を節約から優先して差し引く
+    const allocFromSavings = Math.min(cumAllocations, Math.max(cumSavings, 0));
+    const allocFromDeposits = Math.max(cumAllocations - allocFromSavings, 0);
+    const savingsPart = Math.max(cumSavings - allocFromSavings, 0);
+    const depositPart = Math.max(cumDeposits - allocFromDeposits, 0);
+    return { yearMonth: month, savingsPart, depositPart, total };
+  });
+}
 
 // ---- ページ -----------------------------------------------------------------
 
@@ -220,9 +295,9 @@ export default function SavingsPage() {
     monthlyBreakdowns.map((b) => [b.yearMonth, b]),
   );
 
-  const chartData = buildRecentMonths(currentMonth, 6)
-    .reverse()
-    .map((m) => breakdownByMonth[m] ?? EMPTY_BREAKDOWN(m));
+  const recentMonths = buildRecentMonths(currentMonth, 6).reverse();
+  const chartData = recentMonths.map((m) => breakdownByMonth[m] ?? EMPTY_BREAKDOWN(m));
+  const cumulativeChartData = buildCumulativeData(recentMonths, monthlyBreakdowns, deposits, allocations);
 
   const totalDeposits = deposits.reduce((sum, e) => sum + e.amount, 0);
   const totalAllocations = allocations.reduce((sum, e) => sum + e.amount, 0);
@@ -241,16 +316,16 @@ export default function SavingsPage() {
         </p>
       </div>
 
-      {/* ① 貯金プール合計（メイン） */}
-      <PoolHeroCard
-        amount={savingsPoolTotal}
-        totalSavings={totalSavings}
-        totalDeposits={totalDeposits}
-        totalAllocations={totalAllocations}
-      />
-
-      {/* ② 口座残高（サブ） */}
-      <HeroCard label="口座残高" amount={estimatedBalance} />
+      {/* ① 貯金プール合計 ＋ ② 口座残高（近い間隔でグループ化） */}
+      <div className="space-y-3">
+        <PoolHeroCard
+          amount={savingsPoolTotal}
+          totalSavings={totalSavings}
+          totalDeposits={totalDeposits}
+          totalAllocations={totalAllocations}
+        />
+        <HeroCard label="口座残高" amount={estimatedBalance} />
+      </div>
 
       {/* ③ 月別推移グラフ */}
       <section className="space-y-3">
@@ -334,7 +409,50 @@ export default function SavingsPage() {
         </Card>
       </section>
 
-      {/* ④ 積立・配分 */}
+      {/* ④ 貯金総額推移グラフ */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-3 px-1">
+          <span className="h-px flex-1 bg-border" aria-hidden />
+          <span className="text-[11px] font-semibold text-muted-foreground/70 tracking-wider">
+            貯金総額推移
+          </span>
+          <span className="h-px flex-1 bg-border" aria-hidden />
+        </div>
+        <Card className="rounded-3xl gap-0 py-0 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.10)]">
+          <div className="px-4 pt-5 pb-4">
+            <ResponsiveContainer width="100%" height={160}>
+              <ComposedChart
+                data={cumulativeChartData}
+                margin={{ top: 8, right: 8, bottom: 0, left: 8 }}
+                barSize={20}
+                barCategoryGap="38%"
+              >
+                <XAxis
+                  dataKey="yearMonth"
+                  tick={{ fontSize: 10, fill: "oklch(0.55 0.02 30)" }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v: string) => v.slice(5)}
+                />
+                <YAxis hide />
+                <Tooltip
+                  content={<CumulativeChartTooltip />}
+                  cursor={{ fill: "oklch(0.96 0.008 60 / 0.5)" }}
+                />
+                {/* 節約分（下段）、積立分（上段・角丸） */}
+                <Bar dataKey="savingsPart" stackId="a" fill={COLOR_SAVINGS_POS} radius={[0, 0, 0, 0]} name="節約" />
+                <Bar dataKey="depositPart" stackId="a" fill={COLOR_DEPOSIT} radius={[4, 4, 0, 0]} name="積立" />
+              </ComposedChart>
+            </ResponsiveContainer>
+            <div className="flex items-center gap-5 mt-2 px-1">
+              <LegendBar color={COLOR_SAVINGS_POS} label="節約" />
+              <LegendBar color={COLOR_DEPOSIT} label="積立" />
+            </div>
+          </div>
+        </Card>
+      </section>
+
+      {/* ⑤ 積立・配分 */}
       <section className="space-y-3">
         <div className="flex items-center gap-3 px-1">
           <span className="h-px flex-1 bg-border" aria-hidden />
