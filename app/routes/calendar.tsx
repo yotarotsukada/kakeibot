@@ -553,7 +553,7 @@ function DayDetailPanel({
             entries.map((entry) =>
               entry.type === "入金" ? (
                 <IncomeRow key={entry.id} entry={entry} />
-              ) : entry.type === "支出" ? (
+              ) : (
                 <EntryRow
                   key={entry.id}
                   entry={entry}
@@ -564,7 +564,7 @@ function DayDetailPanel({
                   monthlyWalletName={monthlyWalletName}
                   userNames={userNames}
                 />
-              ) : null,
+              ),
             )
           )}
         </div>

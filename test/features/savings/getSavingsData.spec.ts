@@ -167,6 +167,8 @@ describe("getSavingsData", () => {
       budgets: [{ walletName: NORMAL_2026_05, categoryName: "食費", amount: 50000 }],
       ledger: [
         { id: "s1", date: "2026-05-10", type: "支出", amount: 30000, actor: "共同", category: "食費", wallet: NORMAL_2026_05, shouldSettle: true, memo: "" },
+      ],
+      poolOps: [
         { id: "d1", date: "2026-05-01", type: "積立", amount: 100000, actor: "共同", memo: "初期残高" },
         { id: "d2", date: "2026-05-15", type: "積立", amount: 30000, actor: "共同", memo: "5月積立" },
       ],
@@ -192,6 +194,8 @@ describe("getSavingsData", () => {
       budgets: [{ walletName: NORMAL_2026_05, categoryName: "食費", amount: 50000 }],
       ledger: [
         { id: "s1", date: "2026-05-10", type: "支出", amount: 20000, actor: "共同", category: "食費", wallet: NORMAL_2026_05, shouldSettle: true, memo: "" },
+      ],
+      poolOps: [
         { id: "a1", date: "2026-05-01", type: "配分", amount: 100000, actor: "共同", memo: "旅行費配分" },
       ],
     });
@@ -211,7 +215,7 @@ describe("getSavingsData", () => {
 
   it("精算返却（積立型）: savingsPoolTotal が正しく増える", async () => {
     const storage = createTestStorage({
-      ledger: [
+      poolOps: [
         { id: "a1", date: "2026-04-01", type: "配分", amount: 200000, actor: "共同", memo: "旅行費配分" },
         { id: "d1", date: "2026-05-10", type: "積立", amount: 50000, actor: "共同", memo: "精算返却" },
       ],
@@ -228,12 +232,14 @@ describe("getSavingsData", () => {
     expect(result.value.deposits[0].memo).toBe("精算返却");
   });
 
-  it("estimatedBalance は積立・配分操作の影響を受けない", async () => {
+  it("estimatedBalance は貯金操作の影響を受けない", async () => {
     const storage = createTestStorage({
       wallets: [{ name: NORMAL_2026_05, type: "月次", settled: false }],
       ledger: [
         { id: "i1", date: "2026-05-01", type: "入金", amount: 200000, actor: "共同", memo: "生活費" },
         { id: "s1", date: "2026-05-10", type: "支出", amount: 50000, actor: "共同", category: "食費", wallet: NORMAL_2026_05, shouldSettle: true, memo: "" },
+      ],
+      poolOps: [
         { id: "d1", date: "2026-05-01", type: "積立", amount: 100000, actor: "共同", memo: "積立" },
         { id: "a1", date: "2026-05-15", type: "配分", amount: 80000, actor: "共同", memo: "配分" },
       ],
@@ -244,13 +250,13 @@ describe("getSavingsData", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
-    // estimatedBalance: 200000 - 50000 = 150000（積立・配分は影響しない）
+    // estimatedBalance: 200000 - 50000 = 150000（貯金操作は影響しない）
     expect(result.value.estimatedBalance).toBe(150000);
   });
 
   it("deposits・allocations はそれぞれ新しい日付順に並ぶ", async () => {
     const storage = createTestStorage({
-      ledger: [
+      poolOps: [
         { id: "d1", date: "2026-03-01", type: "積立", amount: 10000, actor: "共同", memo: "3月" },
         { id: "d2", date: "2026-05-01", type: "積立", amount: 20000, actor: "共同", memo: "5月" },
         { id: "d3", date: "2026-04-01", type: "積立", amount: 15000, actor: "共同", memo: "4月" },

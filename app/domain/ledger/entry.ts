@@ -92,32 +92,8 @@ export interface SpendingEntry {
   shouldSettle: boolean;
 }
 
-/**
- * 貯金プールへの追加エントリ（積立・初期残高・精算返却）。
- * amount は常に正。方向（追加）は type で表現する。
- */
-export interface SavingsDepositEntry {
-  date: string;
-  type: "積立";
-  amount: number;
-  actor: string;
-  memo: string;
-}
-
-/**
- * 貯金プールからの使用エントリ（特別財布への割当）。
- * amount は常に正。方向（使用）は type で表現する。
- */
-export interface SavingsAllocationEntry {
-  date: string;
-  type: "配分";
-  amount: number;
-  actor: string;
-  memo: string;
-}
-
 /** features 層が扱う元帳エントリの union 型。 */
-export type LedgerEntry = IncomeEntry | SpendingEntry | SavingsDepositEntry | SavingsAllocationEntry;
+export type LedgerEntry = IncomeEntry | SpendingEntry;
 
 // ---- ParserInput: AI パーサーへの入力 ----
 

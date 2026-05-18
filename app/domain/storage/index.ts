@@ -4,13 +4,10 @@
  */
 
 import type { BudgetRecord, Wallet } from "~/domain/budget/budget";
-import type {
-  IncomeEntry,
-  LedgerEntry,
-  SavingsAllocationEntry,
-  SavingsDepositEntry,
-  SpendingEntry,
-} from "~/domain/ledger/entry";
+import type { IncomeEntry, LedgerEntry, SpendingEntry } from "~/domain/ledger/entry";
+import type { PoolOperation, PoolOperationWithId } from "~/domain/savings/pool-operation";
+
+export type { PoolOperation, PoolOperationWithId };
 
 export type User = {
   lineUserId: string;
@@ -22,6 +19,7 @@ export const SHEET_NAMES = {
   USER_MASTER: "ユーザーマスタ",
   WALLET_MASTER: "財布マスタ",
   BUDGET: "予算記録",
+  SAVINGS_OPS: "貯金操作",
 } as const;
 
 export type SheetName = (typeof SHEET_NAMES)[keyof typeof SHEET_NAMES];
@@ -31,12 +29,6 @@ export type SpendingEntryWithId = SpendingEntry & { id: string };
 
 /** ストレージから読み出した入金エントリ（ID付き）。 */
 export type IncomeEntryWithId = IncomeEntry & { id: string };
-
-/** ストレージから読み出した積立エントリ（ID付き）。 */
-export type SavingsDepositEntryWithId = SavingsDepositEntry & { id: string };
-
-/** ストレージから読み出した配分エントリ（ID付き）。 */
-export type SavingsAllocationEntryWithId = SavingsAllocationEntry & { id: string };
 
 /** ストレージから読み出した元帳エントリ（ID付き）。 */
 export type LedgerEntryWithId = LedgerEntry & { id: string };
@@ -97,4 +89,10 @@ export interface Storage {
   updateLedgerEntryActor(entryId: string, actor: string): Promise<void>;
 
   getUsers(): Promise<User[]>;
+
+  /** 貯金操作シートに追記する。ID はストレージ層が生成する。 */
+  appendPoolOperations(operations: PoolOperation[]): Promise<void>;
+
+  /** 貯金操作シートの全エントリを返す。 */
+  getAllPoolOperations(): Promise<PoolOperationWithId[]>;
 }

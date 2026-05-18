@@ -13,7 +13,7 @@ import {
 } from "recharts";
 import { Card } from "~/components/ui/card";
 import { PageLayout } from "~/components/layout/PageLayout";
-import type { SavingsDepositEntry, SavingsAllocationEntry } from "~/domain/ledger/entry";
+import type { PoolOperation } from "~/domain/savings/pool-operation";
 import { unwrap } from "~/domain/result";
 import { getSavingsData, type MonthlyBreakdown } from "~/features/savings/getSavingsData";
 import { createStorage } from "~/infra/factory";
@@ -41,17 +41,14 @@ export async function action({ request, context }: Route.ActionArgs) {
     return { ok: false };
   }
   const storage = createStorage(env);
-  const baseFields = {
+  const operation: PoolOperation = {
+    type: rawType,
     date: String(formData.get("date")),
     amount: Math.floor(rawAmount),
     actor: "共同",
     memo: String(formData.get("memo")),
   };
-  const entry: SavingsDepositEntry | SavingsAllocationEntry =
-    rawType === "積立"
-      ? { type: "積立", ...baseFields }
-      : { type: "配分", ...baseFields };
-  await storage.appendLedgerEntries([entry]);
+  await storage.appendPoolOperations([operation]);
   return { ok: true };
 }
 
@@ -117,7 +114,7 @@ function PoolHeroCard({
     <Card className="rounded-3xl gap-0 py-0 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.74_0.13_28_/_0.25)]">
       <div className="px-6 py-5">
         <p className="text-[11px] font-medium text-muted-foreground/80 tracking-wide mb-1">
-          貯金プール合計
+          貯金額合計
         </p>
         <p
           className={[

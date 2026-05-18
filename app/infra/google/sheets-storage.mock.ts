@@ -6,6 +6,8 @@ import type { BudgetRecord, Wallet } from "~/domain/budget/budget";
 import type { LedgerEntry, SpendingEntry } from "~/domain/ledger/entry";
 import type {
   LedgerEntryWithId,
+  PoolOperation,
+  PoolOperationWithId,
   SpendingEntryWithId,
   Storage,
   User,
@@ -246,52 +248,19 @@ const SEED_LEDGER: StoredEntry[] = [
     shouldSettle: true,
     memo: "3月日用品",
   },
-  // 積立エントリ（貯金プール追加）
-  {
-    transactionId: "seed-savings-001",
-    date: "2026-01-01",
-    type: "積立",
-    amount: 500000,
-    actor: "共同",
-    memo: "初期残高",
-  },
-  {
-    transactionId: "seed-savings-002",
-    date: "2026-03-01",
-    type: "積立",
-    amount: 30000,
-    actor: "共同",
-    memo: "3月分積立",
-  },
-  {
-    transactionId: "seed-savings-003",
-    date: "2026-04-01",
-    type: "積立",
-    amount: 30000,
-    actor: "共同",
-    memo: "4月分積立",
-  },
-  {
-    transactionId: "seed-savings-004",
-    date: "2026-05-01",
-    type: "積立",
-    amount: 30000,
-    actor: "共同",
-    memo: "5月分積立",
-  },
-  // 配分エントリ（特別財布への割当）
-  {
-    transactionId: "seed-savings-005",
-    date: "2026-04-30",
-    type: "配分",
-    amount: 200000,
-    actor: "共同",
-    memo: "沖縄旅行費用配分",
-  },
+];
+
+const SEED_POOL_OPERATIONS: (PoolOperation & { transactionId: string })[] = [
+  { transactionId: "seed-pool-001", date: "2026-01-01", type: "積立", amount: 500000, actor: "共同", memo: "初期残高" },
+  { transactionId: "seed-pool-002", date: "2026-03-01", type: "積立", amount: 30000, actor: "共同", memo: "3月分積立" },
+  { transactionId: "seed-pool-003", date: "2026-04-01", type: "積立", amount: 30000, actor: "共同", memo: "4月分積立" },
+  { transactionId: "seed-pool-004", date: "2026-05-01", type: "積立", amount: 30000, actor: "共同", memo: "5月分積立" },
+  { transactionId: "seed-pool-005", date: "2026-04-30", type: "配分", amount: 200000, actor: "共同", memo: "沖縄旅行費用配分" },
 ];
 
 export class MockStorage implements Storage {
   private ledger: StoredEntry[] = structuredClone(SEED_LEDGER);
+  private poolOps: (PoolOperation & { transactionId: string })[] = structuredClone(SEED_POOL_OPERATIONS);
   private users = new Map<string, string>([
     ["U_MOCK_USER_A", "A"],
     ["U_MOCK_USER_B", "B"],
@@ -312,10 +281,6 @@ export class MockStorage implements Storage {
       if (e.type === "支出") {
         console.log(
           `[MockStorage] 📝 ${SHEET_NAMES.LEDGER}: ${id} | ${e.date} | 支出 | ¥${e.amount} | ${e.actor} | ${e.category} | ${e.wallet} | ${e.memo}`,
-        );
-      } else if (e.type === "積立" || e.type === "配分") {
-        console.log(
-          `[MockStorage] 📝 ${SHEET_NAMES.LEDGER}: ${id} | ${e.date} | ${e.type} | ¥${e.amount} | ${e.actor} | ${e.memo}`,
         );
       } else {
         console.log(
@@ -487,5 +452,19 @@ export class MockStorage implements Storage {
       lineUserId,
       name,
     }));
+  }
+
+  async appendPoolOperations(operations: PoolOperation[]): Promise<void> {
+    for (const op of operations) {
+      const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+      this.poolOps.push({ transactionId: id, ...op });
+      console.log(
+        `[MockStorage] 💰 ${SHEET_NAMES.SAVINGS_OPS}: ${id} | ${op.date} | ${op.type} | ¥${op.amount} | ${op.actor} | ${op.memo}`,
+      );
+    }
+  }
+
+  async getAllPoolOperations(): Promise<PoolOperationWithId[]> {
+    return this.poolOps.map(({ transactionId, ...op }) => ({ id: transactionId, ...op }));
   }
 }
