@@ -3,6 +3,8 @@ import { CatSavingsIcon } from "./CatSavingsIcon";
 
 const DAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
 
+const COLOR_INCOME_CELL = "oklch(0.55 0.10 165)"; // セル内入金テキスト
+
 function formatCellAmount(amount: number): string {
   return `¥${amount.toLocaleString()}`;
 }
@@ -33,6 +35,11 @@ function buildCells(year: number, month: number): Cell[] {
       dateStr: `${year}-${mm}-${dd}`,
       colIdx: (firstDayOfWeek + d - 1) % 7,
     });
+  }
+  // 最終行を 7 列で揃えるため末尾に空セルを補完する
+  const trailingEmpties = (7 - (cells.length % 7)) % 7;
+  for (let i = 0; i < trailingEmpties; i++) {
+    cells.push({ kind: "empty", key: `t-${i}` });
   }
   return cells;
 }
@@ -139,7 +146,7 @@ export function MonthCalendar({
                   </span>
                 )}
                 {income !== undefined && (
-                  <span className="text-[9px] font-bold font-numeric tabular-nums leading-none" style={{ color: "oklch(0.55 0.10 165)" }}>
+                  <span className="text-[9px] font-bold font-numeric tabular-nums leading-none" style={{ color: COLOR_INCOME_CELL }}>
                     +{formatCellAmount(income)}
                   </span>
                 )}

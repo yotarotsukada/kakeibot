@@ -56,6 +56,11 @@ export interface Storage {
    */
   getLedgerEntriesByWallet(walletName: string): Promise<SpendingEntryWithId[]>;
 
+  /**
+   * 直近の支出エントリを返す（walletName を持つ支出のみが対象）。
+   * 入金エントリは walletName を持たないため意図的に除外している。
+   * 支出がまだ存在しない場合は null を返す。
+   */
   getLatestLedgerEntry(): Promise<{ walletName: string; date: string } | null>;
 
   /**

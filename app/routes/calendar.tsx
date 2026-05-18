@@ -9,7 +9,7 @@ import {
   ValidationError,
   wrapUnknownError,
 } from "~/domain/errors";
-import type { LedgerEntryWithId, SpendingEntryWithId } from "~/domain/storage";
+import type { IncomeEntryWithId, LedgerEntryWithId, SpendingEntryWithId } from "~/domain/storage";
 import { createStorage } from "~/infra/factory";
 import {
   type ActionError,
@@ -19,6 +19,12 @@ import {
 import { requireAuth } from "~/lib/auth";
 import { buildMonthRange, getCurrentMonthJST, isValidMonth } from "~/lib/date";
 import type { Route } from "./+types/calendar";
+
+// ---- 入金表示用カラー --------------------------------------------------------
+
+const COLOR_INCOME_BG    = "oklch(0.95 0.04 165)"; // 入金カード背景（薄緑）
+const COLOR_INCOME_AMOUNT = "oklch(0.48 0.10 165)"; // 入金カード内の金額テキスト
+const COLOR_INCOME_TOTAL  = "oklch(0.55 0.10 165)"; // 日別パネルの入金合計テキスト
 
 export function meta(_args: Route.MetaArgs) {
   return [{ title: "ふたりの家計簿 | カレンダー" }];
@@ -407,11 +413,11 @@ function EntryRow({
 
 // ---- 入金行（カテゴリ・財布の選択なし） ----------------------------------
 
-function IncomeRow({ entry }: { entry: LedgerEntryWithId }) {
+function IncomeRow({ entry }: { entry: IncomeEntryWithId }) {
   return (
     <div
       className="rounded-2xl px-4 py-3 flex items-center gap-3"
-      style={{ backgroundColor: "oklch(0.95 0.04 165)" }}
+      style={{ backgroundColor: COLOR_INCOME_BG }}
     >
       {entry.memo ? (
         <p className="flex-1 min-w-0 text-[11px] text-muted-foreground/70 truncate">
@@ -422,7 +428,7 @@ function IncomeRow({ entry }: { entry: LedgerEntryWithId }) {
       )}
       <span
         className="font-numeric tabular-nums font-bold text-base shrink-0"
-        style={{ color: "oklch(0.48 0.10 165)" }}
+        style={{ color: COLOR_INCOME_AMOUNT }}
       >
         +¥{entry.amount.toLocaleString()}
       </span>
@@ -505,7 +511,7 @@ function DayDetailPanel({
                 {totalIncome > 0 && (
                   <div className="flex items-baseline gap-1">
                     <span className="text-[11px] text-muted-foreground">入金</span>
-                    <span className="font-numeric tabular-nums font-bold text-base" style={{ color: "oklch(0.55 0.10 165)" }}>
+                    <span className="font-numeric tabular-nums font-bold text-base" style={{ color: COLOR_INCOME_TOTAL }}>
                       +¥{totalIncome.toLocaleString()}
                     </span>
                   </div>
