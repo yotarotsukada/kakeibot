@@ -22,9 +22,10 @@ import type { Route } from "./+types/calendar";
 
 // ---- 入金表示用カラー --------------------------------------------------------
 
-const COLOR_INCOME_BG    = "oklch(0.95 0.04 165)"; // 入金カード背景（薄緑）
-const COLOR_INCOME_AMOUNT = "oklch(0.48 0.10 165)"; // 入金カード内の金額テキスト
-const COLOR_INCOME_TOTAL  = "oklch(0.55 0.10 165)"; // 日別パネルの入金合計テキスト
+const COLOR_INCOME_BG     = "oklch(0.93 0.02 165)";  // 入金カード背景（落ち着いた薄緑）
+const COLOR_INCOME_DOT    = "oklch(0.68 0.09 165)";  // 入金ドット
+const COLOR_INCOME_AMOUNT = "oklch(0.48 0.10 165)";  // 入金カード内の金額テキスト
+const COLOR_INCOME_TOTAL  = "oklch(0.55 0.10 165)";  // 日別パネルの入金合計テキスト
 
 export function meta(_args: Route.MetaArgs) {
   return [{ title: "ふたりの家計簿 | カレンダー" }];
@@ -416,18 +417,28 @@ function EntryRow({
 function IncomeRow({ entry }: { entry: IncomeEntryWithId }) {
   return (
     <div
-      className="rounded-2xl px-4 py-3 flex items-center gap-3"
+      className="rounded-2xl px-4 py-3 flex items-start gap-3"
       style={{ backgroundColor: COLOR_INCOME_BG }}
     >
-      {entry.memo ? (
-        <p className="flex-1 min-w-0 text-[11px] text-muted-foreground/70 truncate">
-          {entry.memo}
-        </p>
-      ) : (
-        <span className="flex-1" />
-      )}
+      <div className="flex-1 min-w-0 space-y-1.5">
+        <div className="flex items-center gap-2">
+          <span
+            className="size-2 rounded-full shrink-0 mt-px"
+            style={{ backgroundColor: COLOR_INCOME_DOT }}
+            aria-hidden
+          />
+          <span className="text-[13px] font-medium rounded-lg border border-border/40 bg-muted px-2 py-0.5 text-foreground/80">
+            入金
+          </span>
+        </div>
+        {entry.memo && (
+          <p className="text-[11px] text-muted-foreground/65 truncate pl-4">
+            {entry.memo}
+          </p>
+        )}
+      </div>
       <span
-        className="font-numeric tabular-nums font-bold text-base shrink-0"
+        className="font-numeric tabular-nums font-bold text-base shrink-0 pt-0.5"
         style={{ color: COLOR_INCOME_AMOUNT }}
       >
         +¥{entry.amount.toLocaleString()}
