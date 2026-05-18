@@ -75,6 +75,7 @@ export async function action({ request, context }: Route.ActionArgs) {
       lineClient: createLineClient(env),
       parser: createReceiptParser(env),
       storage: createStorage(env),
+      appBaseUrl: env.APP_BASE_URL,
     }),
   );
 
