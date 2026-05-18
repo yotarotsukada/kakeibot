@@ -427,7 +427,7 @@ function IncomeRow({ entry }: { entry: IncomeEntryWithId }) {
             style={{ backgroundColor: COLOR_INCOME_DOT }}
             aria-hidden
           />
-          <span className="text-[13px] font-medium rounded-lg border border-border/40 bg-muted px-2 py-0.5 text-foreground/80">
+          <span className="text-[13px] font-medium text-foreground/80">
             入金
           </span>
           <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full border border-border/40 text-muted-foreground/70">
