@@ -1,4 +1,4 @@
-import { Cancel01Icon } from "@hugeicons/core-free-icons";
+import { Delete02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useEffect, useState } from "react";
 import { useFetcher, useLoaderData } from "react-router";
@@ -52,9 +52,17 @@ export async function action({ request, context }: Route.ActionArgs) {
   if (!rawAmount || rawAmount <= 0) {
     return { ok: false };
   }
+  const rawDate = String(formData.get("date"));
+  const parsedDate = new Date(rawDate);
+  if (
+    Number.isNaN(parsedDate.getTime()) ||
+    parsedDate.toISOString().slice(0, 10) !== rawDate
+  ) {
+    return { ok: false };
+  }
   const operation: PoolOperation = {
     type: rawType,
-    date: String(formData.get("date")),
+    date: rawDate,
     amount: Math.floor(rawAmount),
     actor: "共同",
     memo: String(formData.get("memo")),
@@ -523,7 +531,7 @@ function PoolOperationRow({ entry }: { entry: PoolEntry }) {
           className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 active:scale-95 transition-all focus-visible:ring-2 focus-visible:ring-ring/30"
           aria-label="削除"
         >
-          <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} />
+          <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={1.8} />
         </button>
       </fetcher.Form>
     </div>
@@ -552,7 +560,14 @@ function SavingsEntryForm({ today }: { today: string }) {
 
   const currentYear = parseInt(today.slice(0, 4));
   const yearOptions = Array.from({ length: 4 }, (_, i) => currentYear - 2 + i);
-  const dateValue = `${year}-${month}-${day}`;
+
+  // 選択中の年月の末日を計算し、日が超えていれば末日に丸める
+  const maxDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+  const clampedDay = parseInt(day) > maxDay ? String(maxDay).padStart(2, "0") : day;
+  if (clampedDay !== day) setDay(clampedDay);
+  const dayOptions = Array.from({ length: maxDay }, (_, i) => i + 1);
+
+  const dateValue = `${year}-${month}-${clampedDay}`;
 
   const selectClass =
     "px-2 py-2 rounded-xl border border-input bg-background text-sm appearance-none text-center";
@@ -638,11 +653,11 @@ function SavingsEntryForm({ today }: { today: string }) {
         </select>
         <span className="text-sm text-muted-foreground">月</span>
         <select
-          value={day}
+          value={clampedDay}
           onChange={(e) => setDay(e.target.value)}
           className={`${selectClass} w-12`}
         >
-          {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+          {dayOptions.map((d) => (
             <option key={d} value={String(d).padStart(2, "0")}>{d}</option>
           ))}
         </select>
