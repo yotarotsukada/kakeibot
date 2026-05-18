@@ -26,4 +26,7 @@ interface Env {
   GOOGLE_SERVICE_ACCOUNT_EMAIL: string;
   GOOGLE_PRIVATE_KEY: string;
   SPREADSHEET_ID: string;
+
+  // ---- アプリ設定 ----
+  APP_BASE_URL: string;
 }

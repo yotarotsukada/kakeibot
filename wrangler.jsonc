@@ -16,7 +16,8 @@
     "USE_MOCK_AI": "false",
     "USE_MOCK_STORAGE": "false",
     "USE_MOCK_AUTH": "false",
-    "GEMINI_MODEL": "gemini-2.5-flash-lite"
+    "GEMINI_MODEL": "gemini-2.5-flash-lite",
+    "APP_BASE_URL": "https://kakeibot.yotarotsukada.workers.dev"
   },
   "env": {
     // プレビュー環境（PR ごとの Worker にも適用）
@@ -31,6 +32,7 @@
         "GEMINI_MODEL": "gemini-2.5-flash-lite",
         // LINE / AI がモックのため下記はダミー値で問題ない
         "JWT_SECRET": "preview-not-a-real-secret",
+        "APP_BASE_URL": "https://preview.example.com",
         "LINE_LOGIN_CALLBACK_URL": "https://preview.example.com/auth/callback",
         "LINE_CHANNEL_SECRET": "preview-mock",
         "LINE_CHANNEL_ACCESS_TOKEN": "preview-mock",

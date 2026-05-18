@@ -19,6 +19,7 @@ export interface LedgerDeps {
   lineClient: LineClient;
   parser: ReceiptParser;
   storage: Storage;
+  appBaseUrl: string;
 }
 
 /**
@@ -39,7 +40,7 @@ export async function registerLedgerEntries(
 
 async function processMessage(
   msg: ExtractedMessage,
-  { lineClient, parser, storage }: LedgerDeps,
+  { lineClient, parser, storage, appBaseUrl }: LedgerDeps,
 ): Promise<void> {
   try {
     // 1. ユーザーマスタで存在確認（認証）。元帳に書き込む actor は共同に統一する
@@ -75,7 +76,7 @@ async function processMessage(
     if (msg.replyToken) {
       await lineClient.reply(
         msg.replyToken,
-        `✅ 登録しました\n${entry.category}: ¥${entry.amount.toLocaleString()}`,
+        `✅ 登録しました\n${entry.date} ${entry.category}: ¥${entry.amount.toLocaleString()}\n${appBaseUrl}/calendar`,
       );
     }
 
