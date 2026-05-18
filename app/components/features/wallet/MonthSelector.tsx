@@ -1,6 +1,6 @@
 import { ArrowLeft02Icon, ArrowRight02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Link } from "react-router";
+import { Link, useNavigation } from "react-router";
 
 type MonthSelectorProps = {
   /** 表示する月（YYYY-MM） */
@@ -26,6 +26,12 @@ export function MonthSelector({
   nextMonth,
   basePath,
 }: MonthSelectorProps) {
+  const navigation = useNavigation();
+  const pendingSearch =
+    navigation.state === "loading"
+      ? (navigation.location?.search ?? null)
+      : null;
+
   const [year, month] = selectedMonth.split("-");
   const linkTo = (m: string) =>
     basePath === "/" ? `/?month=${m}` : `${basePath}?month=${m}`;
@@ -35,6 +41,7 @@ export function MonthSelector({
       <ChevronButton
         direction="prev"
         to={prevMonth ? linkTo(prevMonth) : null}
+        pendingSearch={pendingSearch}
       />
 
       <div className="flex flex-col items-center gap-0.5">
@@ -52,6 +59,7 @@ export function MonthSelector({
       <ChevronButton
         direction="next"
         to={nextMonth ? linkTo(nextMonth) : null}
+        pendingSearch={pendingSearch}
       />
     </div>
   );
@@ -60,13 +68,16 @@ export function MonthSelector({
 function ChevronButton({
   direction,
   to,
+  pendingSearch,
 }: {
   direction: "prev" | "next";
   to: string | null;
+  pendingSearch: string | null;
 }) {
   const icon = direction === "prev" ? ArrowLeft02Icon : ArrowRight02Icon;
   const baseClass =
     "size-10 rounded-full flex items-center justify-center transition-all";
+  const isPending = !!(to && pendingSearch && to.includes(pendingSearch));
 
   if (!to) {
     return (
@@ -82,7 +93,12 @@ function ChevronButton({
   return (
     <Link
       to={to}
-      className={`${baseClass} text-muted-foreground hover:text-primary hover:bg-primary/8 active:scale-95`}
+      className={[
+        baseClass,
+        isPending
+          ? "text-primary pointer-events-none"
+          : "text-muted-foreground hover:text-primary hover:bg-primary/8 active:scale-95",
+      ].join(" ")}
       aria-label={direction === "prev" ? "前の月" : "次の月"}
     >
       <HugeiconsIcon icon={icon} size={18} strokeWidth={2} />
