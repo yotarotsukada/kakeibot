@@ -95,4 +95,7 @@ export interface Storage {
 
   /** 貯金操作シートの全エントリを返す。 */
   getAllPoolOperations(): Promise<PoolOperationWithId[]>;
+
+  /** 指定 ID の貯金操作エントリを削除する。 */
+  deletePoolOperation(id: string): Promise<void>;
 }

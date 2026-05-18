@@ -1,3 +1,5 @@
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { useEffect, useState } from "react";
 import { useFetcher, useLoaderData } from "react-router";
 import {
@@ -29,7 +31,17 @@ export async function action({ request, context }: Route.ActionArgs) {
   const { env } = (context as { cloudflare: { env: Env } }).cloudflare;
   await requireAuth(request, env);
   const formData = await request.formData();
-  if (formData.get("intent") !== "addSavingsEntry") {
+  const storage = createStorage(env);
+  const intent = formData.get("intent");
+
+  if (intent === "deletePoolOperation") {
+    const id = String(formData.get("id"));
+    if (!id) return { ok: false };
+    await storage.deletePoolOperation(id);
+    return { ok: true };
+  }
+
+  if (intent !== "addSavingsEntry") {
     return { ok: false };
   }
   const rawType = String(formData.get("type"));
@@ -40,7 +52,6 @@ export async function action({ request, context }: Route.ActionArgs) {
   if (!rawAmount || rawAmount <= 0) {
     return { ok: false };
   }
-  const storage = createStorage(env);
   const operation: PoolOperation = {
     type: rawType,
     date: String(formData.get("date")),
@@ -372,8 +383,10 @@ type PoolEntry = { id: string; date: string; type: "積立" | "配分"; amount: 
 function PoolOperationRow({ entry }: { entry: PoolEntry }) {
   const isDeposit = entry.type === "積立";
   const [, m, d] = entry.date.split("-");
+  const fetcher = useFetcher();
+  const isDeleting = fetcher.state !== "idle";
   return (
-    <div className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+    <div className={["flex items-center gap-3 py-2.5 first:pt-0 last:pb-0 transition-opacity", isDeleting ? "opacity-40 pointer-events-none" : ""].join(" ")}>
       <span className="text-[11px] text-muted-foreground/60 w-9 shrink-0 tabular-nums">
         {parseInt(m)}/{parseInt(d)}
       </span>
@@ -384,6 +397,17 @@ function PoolOperationRow({ entry }: { entry: PoolEntry }) {
         {isDeposit ? "+" : "−"}¥{entry.amount.toLocaleString()}
       </span>
       <span className="text-sm text-foreground/70 flex-1 truncate">{entry.memo}</span>
+      <fetcher.Form method="post">
+        <input type="hidden" name="intent" value="deletePoolOperation" />
+        <input type="hidden" name="id" value={entry.id} />
+        <button
+          type="submit"
+          className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 active:scale-95 transition-all focus-visible:ring-2 focus-visible:ring-ring/30"
+          aria-label="削除"
+        >
+          <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} />
+        </button>
+      </fetcher.Form>
     </div>
   );
 }

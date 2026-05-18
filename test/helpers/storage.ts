@@ -173,6 +173,11 @@ export function createTestStorage(init: TestStorageInit = {}): Storage {
       }));
     },
 
+    async deletePoolOperation(id: string) {
+      const idx = poolOps.findIndex((op) => op.id === id);
+      if (idx !== -1) poolOps.splice(idx, 1);
+    },
+
     async appendPoolOperations(operations: PoolOperation[]) {
       for (const op of operations) {
         poolOps.push({ id: `pool-${idSeq++}`, ...op });

@@ -454,6 +454,14 @@ export class MockStorage implements Storage {
     }));
   }
 
+  async deletePoolOperation(id: string): Promise<void> {
+    const idx = this.poolOps.findIndex((op) => op.transactionId === id);
+    if (idx !== -1) {
+      this.poolOps.splice(idx, 1);
+      console.log(`[MockStorage] 🗑 ${SHEET_NAMES.SAVINGS_OPS}: ${id} 削除`);
+    }
+  }
+
   async appendPoolOperations(operations: PoolOperation[]): Promise<void> {
     for (const op of operations) {
       const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;

@@ -712,6 +712,42 @@ export class GoogleSheetsStorage implements Storage {
     }
   }
 
+  async deletePoolOperation(id: string): Promise<void> {
+    try {
+      const token = await this.getAccessToken();
+      const range = `${SHEET_NAMES.SAVINGS_OPS}!A:A`;
+      const readUrl = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(range)}`;
+      const readRes = await fetch(readUrl, { headers: { Authorization: `Bearer ${token}` } });
+      if (!readRes.ok) throw new Error(`Sheets read failed: ${readRes.status}`);
+      const data = (await readRes.json()) as { values?: string[][] };
+      const rows = data.values ?? [];
+      const rowIdx = rows.findIndex((row) => row[0] === id);
+      if (rowIdx === -1) return;
+
+      const metaUrl = `${SHEETS_BASE}/${this.spreadsheetId}?fields=sheets.properties`;
+      const metaRes = await fetch(metaUrl, { headers: { Authorization: `Bearer ${token}` } });
+      if (!metaRes.ok) throw new Error(`Sheets metadata failed: ${metaRes.status}`);
+      const meta = (await metaRes.json()) as {
+        sheets: { properties: { sheetId: number; title: string } }[];
+      };
+      const sheet = meta.sheets.find((s) => s.properties.title === SHEET_NAMES.SAVINGS_OPS);
+      if (!sheet) throw new Error(`シート "${SHEET_NAMES.SAVINGS_OPS}" が見つかりません`);
+
+      const batchUrl = `${SHEETS_BASE}/${this.spreadsheetId}:batchUpdate`;
+      const batchRes = await fetch(batchUrl, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requests: [{ deleteDimension: { range: { sheetId: sheet.properties.sheetId, dimension: "ROWS", startIndex: rowIdx, endIndex: rowIdx + 1 } } }],
+        }),
+      });
+      if (!batchRes.ok) throw new Error(`Sheets delete failed: ${batchRes.status} ${await batchRes.text()}`);
+    } catch (err) {
+      if (err instanceof GoogleSheetsError) throw err;
+      throw new GoogleSheetsError("貯金操作の削除に失敗しました", err);
+    }
+  }
+
   async appendPoolOperations(operations: PoolOperation[]): Promise<void> {
     try {
       const token = await this.getAccessToken();
