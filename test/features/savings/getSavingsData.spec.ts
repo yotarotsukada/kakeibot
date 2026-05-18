@@ -41,8 +41,9 @@ describe("getSavingsData", () => {
     expect(result.value.estimatedBalance).toBe(70000);
   });
 
-  it("推定残高: 立替支出（actor !== 共同）は除外される", async () => {
+  it("推定残高: 立替支出（actor が個人名）は除外される", async () => {
     const storage = createTestStorage({
+      users: { U_USER_A: "A" },
       wallets: [{ name: NORMAL_2026_05, type: "月次", settled: false }],
       ledger: [
         { id: "i1", date: "2026-05-01", type: "入金", amount: 200000, actor: "A", memo: "生活費" },
@@ -56,7 +57,7 @@ describe("getSavingsData", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
-    // 200000 − 50000(共同のみ) = 150000（立替の30000は除外）
+    // 200000 − 50000（共同のみ、個人名 actor の30000は除外）= 150000
     expect(result.value.estimatedBalance).toBe(150000);
   });
 

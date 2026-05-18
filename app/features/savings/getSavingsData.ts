@@ -43,18 +43,22 @@ export async function getSavingsData(deps: {
   try {
     const { storage } = deps;
 
-    const [allEntries, wallets] = await Promise.all([
+    const [allEntries, wallets, users] = await Promise.all([
       storage.getAllLedgerEntries(),
       storage.getWallets(),
+      storage.getUsers(),
     ]);
 
-    // 1. 推定残高: 全入金 − 共同支出（立替支出は個人の持ち出しのため除外）
+    // 個人ユーザー名セット: カレンダーと同じ判定（名前一致 = 立替、それ以外 = 共同）
+    const userNames = new Set(users.map((u) => u.name));
+
+    // 1. 推定残高: 全入金 − 共同支出（個人名 actor の立替支出は除外）
     const estimatedBalance =
       allEntries
         .filter((e) => e.type === "入金")
         .reduce((sum, e) => sum + e.amount, 0) -
       allEntries
-        .filter((e) => e.type === "支出" && e.actor === "共同")
+        .filter((e) => e.type === "支出" && !userNames.has(e.actor))
         .reduce((sum, e) => sum + e.amount, 0);
 
     // 2. 通常財布（YYYY-MM通常）の年月一覧を取得
