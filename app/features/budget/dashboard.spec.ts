@@ -113,7 +113,7 @@ describe("getDashboardData", () => {
       budgets: [{ walletName: WALLET, categoryName: "食費", amount: 50000 }],
       ledger: [
         { id: "1", date: "2026-01-05", type: "支出", amount: 10000, actor: "A", category: "食費", wallet: WALLET, shouldSettle: true, memo: "" },
-        { id: "2", date: "2026-01-06", type: "入金", amount: 100000, actor: "A", category: "食費", wallet: WALLET, shouldSettle: true, memo: "" },
+        { id: "2", date: "2026-01-06", type: "入金", amount: 100000, actor: "A", memo: "" },
       ],
     });
 

@@ -2,6 +2,7 @@ import {
   Calendar03Icon,
   Coins01Icon,
   PiggyBankIcon,
+  SavingsIcon,
   Wallet01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -71,6 +72,18 @@ export function BottomNav() {
               strokeWidth={isActive ? 2 : 1.5}
             />
             <span>財布</span>
+          </>
+        )}
+      </NavLink>
+      <NavLink to="/savings" className={navLinkClass}>
+        {({ isActive }) => (
+          <>
+            <HugeiconsIcon
+              icon={SavingsIcon}
+              size={22}
+              strokeWidth={isActive ? 2 : 1.5}
+            />
+            <span>貯金</span>
           </>
         )}
       </NavLink>

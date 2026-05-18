@@ -7,5 +7,6 @@ export default [
   route("budget", "routes/budget.tsx"),
   route("calendar", "routes/calendar.tsx"),
   route("special-wallets", "routes/special-wallets.tsx"),
+  route("savings", "routes/savings.tsx"),
   route("webhook", "routes/webhook.ts"),
 ] satisfies RouteConfig;

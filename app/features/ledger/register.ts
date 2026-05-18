@@ -9,7 +9,12 @@
  */
 
 import { AppError, UnknownUserError } from "~/domain/errors";
-import type { LedgerEntry, ParsedEntry } from "~/domain/ledger/entry";
+import type {
+  IncomeEntry,
+  LedgerEntry,
+  ParsedEntry,
+  SpendingEntry,
+} from "~/domain/ledger/entry";
 import type { ReceiptParser } from "~/domain/ledger/receipt-parser";
 import type { LineClient } from "~/domain/line/client";
 import type { ExtractedMessage } from "~/domain/line/event";
@@ -74,14 +79,17 @@ async function processMessage(
 
     // 6. 返信
     if (msg.replyToken) {
-      await lineClient.reply(
-        msg.replyToken,
-        `✅ 登録しました\n${entry.date} ${entry.category}: ¥${entry.amount.toLocaleString()}\n${appBaseUrl}/calendar`,
-      );
+      const replyText =
+        entry.type === "入金"
+          ? `✅ 入金を登録しました\n${entry.date} ¥${entry.amount.toLocaleString()}\n${appBaseUrl}/savings`
+          : `✅ 登録しました\n${entry.date} ${entry.category}: ¥${entry.amount.toLocaleString()}\n${appBaseUrl}/calendar`;
+      await lineClient.reply(msg.replyToken, replyText);
     }
 
+    const entryLabel =
+      entry.type === "入金" ? "入金" : `${entry.category} (${entry.wallet})`;
     console.log(
-      `[Ledger] ✅ 登録 (${msg.userId} / actor: ${actor}) ${entry.category} ¥${entry.amount}`,
+      `[Ledger] ✅ 登録 (${msg.userId} / actor: ${actor}) ${entryLabel} ¥${entry.amount}`,
     );
   } catch (err) {
     if (err instanceof UnknownUserError) {
@@ -128,13 +136,39 @@ function getTodayJST(): string {
 /**
  * ParsedEntry → LedgerEntry に変換する。
  *
+ * 入金:
+ * - date: 空の場合は今日の日付（JST）を補完する。
+ * - wallet / category / shouldSettle は入金ドメインに存在しない。
+ *
+ * 支出:
  * - date: 空の場合は今日の日付（JST）を補完する。
  * - wallet: AI が返却した date の YYYY-MM から「YYYY-MM通常」を生成。
- * - shouldSettle: 常に true（仕様: SPEC.md §8 参照）。
+ * - shouldSettle: 常に true。
  */
 function toLedgerEntry(parsed: ParsedEntry, actor: string): LedgerEntry {
   const dateStr = parsed.date || getTodayJST();
+
+  if (parsed.type === "入金") {
+    const entry: IncomeEntry = {
+      type: "入金",
+      date: dateStr,
+      amount: parsed.amount,
+      actor,
+      memo: parsed.memo,
+    };
+    return entry;
+  }
+
   const [year, month] = dateStr.split("-");
-  const wallet = `${year}-${month}通常`;
-  return { ...parsed, date: dateStr, actor, wallet, shouldSettle: true };
+  const entry: SpendingEntry = {
+    type: "支出",
+    date: dateStr,
+    amount: parsed.amount,
+    actor,
+    memo: parsed.memo,
+    wallet: `${year}-${month}通常`,
+    category: parsed.category,
+    shouldSettle: true,
+  };
+  return entry;
 }

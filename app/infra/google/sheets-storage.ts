@@ -7,7 +7,12 @@ import { importPKCS8, SignJWT } from "jose";
 import type { BudgetRecord, Wallet } from "~/domain/budget/budget";
 import { GoogleSheetsError } from "~/domain/errors";
 import type { LedgerEntry } from "~/domain/ledger/entry";
-import type { LedgerEntryWithId, Storage, User } from "~/domain/storage";
+import type {
+  LedgerEntryWithId,
+  SpendingEntryWithId,
+  Storage,
+  User,
+} from "~/domain/storage";
 import { SHEET_NAMES } from "~/domain/storage";
 
 const SHEETS_BASE = "https://sheets.googleapis.com/v4/spreadsheets";
@@ -35,9 +40,9 @@ export class GoogleSheetsStorage implements Storage {
         e.type,
         e.amount,
         e.actor,
-        e.category,
-        e.wallet,
-        e.shouldSettle ? "TRUE" : "FALSE",
+        e.type === "支出" ? e.category : "",
+        e.type === "支出" ? e.wallet : "",
+        e.type === "支出" ? (e.shouldSettle ? "TRUE" : "FALSE") : "",
         e.memo,
       ]);
 
@@ -421,9 +426,10 @@ export class GoogleSheetsStorage implements Storage {
     }
   }
 
-  async getLedgerEntriesByWallet(walletName: string): Promise<LedgerEntry[]> {
-    const entries = await this.getLedgerEntriesForCalendar(walletName);
-    return entries.map(({ id: _id, ...entry }) => entry);
+  async getLedgerEntriesByWallet(
+    walletName: string,
+  ): Promise<SpendingEntryWithId[]> {
+    return this.getLedgerEntriesForCalendar(walletName);
   }
 
   async getLatestLedgerEntry(): Promise<{
@@ -432,6 +438,7 @@ export class GoogleSheetsStorage implements Storage {
   } | null> {
     try {
       const token = await this.getAccessToken();
+      // type(C), wallet(G) を持つ支出エントリのみを対象とする
       const range = `${SHEET_NAMES.LEDGER}!B:G`;
       const url = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(range)}`;
       const res = await fetch(url, {
@@ -440,7 +447,8 @@ export class GoogleSheetsStorage implements Storage {
       if (!res.ok) return null;
       const data = (await res.json()) as { values?: string[][] };
       if (!data.values || data.values.length <= 1) return null;
-      const rows = data.values.slice(1).filter((row) => row[0] && row[5]);
+      // row[1]=type, row[5]=wallet; 支出かつ財布が設定されているもの
+      const rows = data.values.slice(1).filter((row) => row[0] && row[1] === "支出" && row[5]);
       if (rows.length === 0) return null;
       const latest = rows.reduce((prev, cur) =>
         cur[0] > prev[0] ? cur : prev,
@@ -453,7 +461,7 @@ export class GoogleSheetsStorage implements Storage {
 
   async getLedgerEntriesForCalendar(
     walletName: string,
-  ): Promise<LedgerEntryWithId[]> {
+  ): Promise<SpendingEntryWithId[]> {
     try {
       const token = await this.getAccessToken();
       const range = `${SHEET_NAMES.LEDGER}!A:I`;
@@ -467,10 +475,10 @@ export class GoogleSheetsStorage implements Storage {
       return data.values
         .slice(1)
         .filter((row) => row[6] === walletName)
-        .map((row) => ({
+        .map((row): SpendingEntryWithId => ({
           id: row[0],
           date: row[1],
-          type: row[2] as "入金" | "支出",
+          type: "支出",
           amount: Number(row[3]) || 0,
           actor: row[4],
           category: row[5],
@@ -541,17 +549,24 @@ export class GoogleSheetsStorage implements Storage {
       return data.values
         .slice(1)
         .filter((row) => row[1]?.startsWith(yearMonth))
-        .map((row) => ({
-          id: row[0],
-          date: row[1],
-          type: row[2] as "入金" | "支出",
-          amount: Number(row[3]) || 0,
-          actor: row[4],
-          category: row[5],
-          wallet: row[6],
-          shouldSettle: row[7] === "TRUE",
-          memo: row[8] ?? "",
-        }));
+        .map(rowToLedgerEntryWithId);
+    } catch (err) {
+      throw new GoogleSheetsError("元帳の取得に失敗しました", err);
+    }
+  }
+
+  async getAllLedgerEntries(): Promise<LedgerEntryWithId[]> {
+    try {
+      const token = await this.getAccessToken();
+      const range = `${SHEET_NAMES.LEDGER}!A:I`;
+      const url = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(range)}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return [];
+      const data = (await res.json()) as { values?: string[][] };
+      if (!data.values) return [];
+      return data.values.slice(1).filter((row) => row[0]).map(rowToLedgerEntryWithId);
     } catch (err) {
       throw new GoogleSheetsError("元帳の取得に失敗しました", err);
     }
@@ -737,4 +752,32 @@ export class GoogleSheetsStorage implements Storage {
 
 function generateTransactionId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/**
+ * シート行（A:I）をドメイン型に変換するヘルパー。
+ * type 列（index 2）で IncomeEntry / SpendingEntry を判別する。
+ */
+function rowToLedgerEntryWithId(row: string[]): LedgerEntryWithId {
+  if (row[2] === "入金") {
+    return {
+      id: row[0],
+      date: row[1],
+      type: "入金",
+      amount: Number(row[3]) || 0,
+      actor: row[4],
+      memo: row[8] ?? "",
+    };
+  }
+  return {
+    id: row[0],
+    date: row[1],
+    type: "支出",
+    amount: Number(row[3]) || 0,
+    actor: row[4],
+    category: row[5] ?? "",
+    wallet: row[6] ?? "",
+    shouldSettle: row[7] === "TRUE",
+    memo: row[8] ?? "",
+  };
 }

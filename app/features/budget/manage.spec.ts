@@ -206,7 +206,7 @@ describe("getBudgetPageData", () => {
         { id: "1", date: "2026-01-05", type: "支出", amount: 1000, actor: "A", category: "食費", wallet: "2026-01通常", shouldSettle: true, memo: "" },
         { id: "2", date: "2026-01-06", type: "支出", amount: 2000, actor: "B", category: "食費", wallet: "2026-01通常", shouldSettle: true, memo: "" },
         { id: "3", date: "2026-01-07", type: "支出", amount: 3000, actor: "A", category: "日用品費", wallet: "2026-01通常", shouldSettle: true, memo: "" },
-        { id: "4", date: "2026-01-08", type: "入金", amount: 5000, actor: "A", category: "収入", wallet: "2026-01通常", shouldSettle: true, memo: "" },
+        { id: "4", date: "2026-01-08", type: "入金", amount: 5000, actor: "A", memo: "" },
       ],
     });
     const result = await getBudgetPageData("2026-01", { storage });

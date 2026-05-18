@@ -9,7 +9,7 @@ import {
   ValidationError,
   wrapUnknownError,
 } from "~/domain/errors";
-import type { LedgerEntryWithId } from "~/domain/storage";
+import type { LedgerEntryWithId, SpendingEntryWithId } from "~/domain/storage";
 import { createStorage } from "~/infra/factory";
 import {
   type ActionError,
@@ -127,7 +127,7 @@ export async function action({
 type AttributionValue = `CATEGORY:${string}` | `WALLET:${string}`;
 
 function encodeAttribution(
-  entry: LedgerEntryWithId,
+  entry: SpendingEntryWithId,
   monthlyWalletName: string,
   specialWalletNames: string[],
   categories: string[],
@@ -168,7 +168,7 @@ function EntryRow({
   monthlyWalletName,
   userNames,
 }: {
-  entry: LedgerEntryWithId;
+  entry: SpendingEntryWithId;
   categories: string[];
   colorMap: Map<string, string>;
   specialWalletNames: string[];
@@ -405,6 +405,32 @@ function EntryRow({
   );
 }
 
+// ---- 入金行（カテゴリ・財布の選択なし） ----------------------------------
+
+function IncomeRow({ entry }: { entry: LedgerEntryWithId }) {
+  return (
+    <div className="bg-background rounded-2xl px-4 py-3 flex items-start gap-3 border border-border/30 shadow-[0_1px_4px_-2px_oklch(0.30_0.02_30_/_0.08)]">
+      <div className="flex-1 min-w-0 space-y-1.5">
+        <div className="flex items-center gap-2">
+          <span
+            className="size-2 rounded-full shrink-0 mt-px bg-emerald-400"
+            aria-hidden
+          />
+          <span className="text-[13px] font-medium text-emerald-700">入金</span>
+        </div>
+        {entry.memo && (
+          <p className="text-[11px] text-muted-foreground/65 truncate pl-4">
+            {entry.memo}
+          </p>
+        )}
+      </div>
+      <span className="font-numeric tabular-nums font-bold text-base text-emerald-700 shrink-0 pt-0.5">
+        +¥{entry.amount.toLocaleString()}
+      </span>
+    </div>
+  );
+}
+
 // ---- 日別パネル（スライドアップ、オーバーレイなし） ----------------------
 
 function DayDetailPanel({
@@ -490,18 +516,22 @@ function DayDetailPanel({
               この日の記録はありません
             </p>
           ) : (
-            entries.map((entry) => (
-              <EntryRow
-                key={entry.id}
-                entry={entry}
-                categories={categories}
-                colorMap={colorMap}
-                specialWalletNames={specialWalletNames}
-                unsettledSpecialWallets={unsettledSpecialWallets}
-                monthlyWalletName={monthlyWalletName}
-                userNames={userNames}
-              />
-            ))
+            entries.map((entry) =>
+              entry.type === "入金" ? (
+                <IncomeRow key={entry.id} entry={entry} />
+              ) : (
+                <EntryRow
+                  key={entry.id}
+                  entry={entry}
+                  categories={categories}
+                  colorMap={colorMap}
+                  specialWalletNames={specialWalletNames}
+                  unsettledSpecialWallets={unsettledSpecialWallets}
+                  monthlyWalletName={monthlyWalletName}
+                  userNames={userNames}
+                />
+              ),
+            )
           )}
         </div>
       </div>
