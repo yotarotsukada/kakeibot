@@ -41,6 +41,7 @@ type Props = {
   year: number;
   month: number;
   dailyTotals: Record<string, number>;
+  dailyIncomes: Record<string, number>;
   selectedDate: string | null;
   onDateSelect: (date: string) => void;
 };
@@ -49,6 +50,7 @@ export function MonthCalendar({
   year,
   month,
   dailyTotals,
+  dailyIncomes,
   selectedDate,
   onDateSelect,
 }: Props) {
@@ -89,10 +91,11 @@ export function MonthCalendar({
           }
 
           const total = dailyTotals[cell.dateStr];
+          const income = dailyIncomes[cell.dateStr];
           const isSelected = cell.dateStr === selectedDate;
           const isToday = cell.dateStr === todayStr;
           const isPast = cell.dateStr < todayStr;
-          const isSavingDay = isPast && total === undefined;
+          const isSavingDay = isPast && total === undefined && income === undefined;
           const isSun = cell.colIdx === 0;
           const isSat = cell.colIdx === 6;
 
@@ -102,7 +105,7 @@ export function MonthCalendar({
               type="button"
               onClick={() => onDateSelect(cell.dateStr)}
               className={cn(
-                "h-[60px] flex flex-col items-center pt-1.5 gap-0.5",
+                "h-[72px] flex flex-col items-center pt-1.5 gap-0.5",
                 "border-b border-r border-border/20",
                 "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
                 isSelected
@@ -128,15 +131,20 @@ export function MonthCalendar({
                 {cell.date}
               </span>
 
-              {/* 金額 or 猫アイコン — 高さを h-4 に固定して両者の重心を揃える */}
-              <div className="h-4 flex items-center justify-center">
+              {/* 支出 / 入金 / 貯金猫アイコン */}
+              <div className="flex flex-col items-center gap-px">
                 {total !== undefined && (
                   <span className="text-[9px] font-bold font-numeric tabular-nums leading-none text-primary/75">
                     {formatCellAmount(total)}
                   </span>
                 )}
+                {income !== undefined && (
+                  <span className="text-[9px] font-bold font-numeric tabular-nums leading-none" style={{ color: "oklch(0.55 0.10 165)" }}>
+                    +{formatCellAmount(income)}
+                  </span>
+                )}
                 {isSavingDay && (
-                  <CatSavingsIcon size={13} className="text-primary/70 -mt-1" />
+                  <CatSavingsIcon size={13} className="text-primary/70" />
                 )}
               </div>
             </button>

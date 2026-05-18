@@ -413,7 +413,8 @@ function IncomeRow({ entry }: { entry: LedgerEntryWithId }) {
       <div className="flex-1 min-w-0 space-y-1.5">
         <div className="flex items-center gap-2">
           <span
-            className="size-2 rounded-full shrink-0 mt-px bg-emerald-400"
+            className="size-2 rounded-full shrink-0 mt-px"
+            style={{ backgroundColor: "oklch(0.72 0.10 165)" }}
             aria-hidden
           />
           <span className="text-[13px] font-medium text-emerald-700">入金</span>
@@ -467,8 +468,11 @@ function DayDetailPanel({
 
   const [, m, d] = date.split("-");
   const label = `${Number(m)}月${Number(d)}日`;
-  const total = entries
+  const totalSpending = entries
     .filter((e) => e.type === "支出")
+    .reduce((s, e) => s + e.amount, 0);
+  const totalIncome = entries
+    .filter((e) => e.type === "入金")
     .reduce((s, e) => s + e.amount, 0);
 
   return (
@@ -490,12 +494,24 @@ function DayDetailPanel({
         <div className="flex items-start justify-between px-5 pb-3">
           <div>
             <p className="font-bold text-lg leading-tight">{label}</p>
-            {total > 0 && (
-              <div className="flex items-baseline gap-1 mt-0.5">
-                <span className="text-[11px] text-muted-foreground">支出</span>
-                <span className="font-numeric tabular-nums font-bold text-base text-primary">
-                  ¥{total.toLocaleString()}
-                </span>
+            {(totalSpending > 0 || totalIncome > 0) && (
+              <div className="flex items-center gap-3 mt-0.5">
+                {totalSpending > 0 && (
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[11px] text-muted-foreground">支出</span>
+                    <span className="font-numeric tabular-nums font-bold text-base text-primary">
+                      ¥{totalSpending.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+                {totalIncome > 0 && (
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[11px] text-muted-foreground">入金</span>
+                    <span className="font-numeric tabular-nums font-bold text-base" style={{ color: "oklch(0.55 0.10 165)" }}>
+                      +¥{totalIncome.toLocaleString()}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -562,11 +578,22 @@ export default function CalendarPage() {
 
   const [year, month] = selectedMonth.split("-").map(Number);
 
-  // 日別支出合計マップ（全財布の明細を含む）
+  // 日別支出合計マップ
   const dailyTotals = useMemo(() => {
     const map: Record<string, number> = {};
     for (const e of entries) {
       if (e.type === "支出") {
+        map[e.date] = (map[e.date] ?? 0) + e.amount;
+      }
+    }
+    return map;
+  }, [entries]);
+
+  // 日別入金合計マップ
+  const dailyIncomes = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const e of entries) {
+      if (e.type === "入金") {
         map[e.date] = (map[e.date] ?? 0) + e.amount;
       }
     }
@@ -606,6 +633,7 @@ export default function CalendarPage() {
           year={year}
           month={month}
           dailyTotals={dailyTotals}
+          dailyIncomes={dailyIncomes}
           selectedDate={selectedDate}
           onDateSelect={handleDateSelect}
         />
