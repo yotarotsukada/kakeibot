@@ -3,7 +3,6 @@ import {
   Bar,
   BarChart,
   Cell,
-  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -32,15 +31,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
 // ---- ヒーローカード ----------------------------------------------------------
 
-function HeroCard({
-  label,
-  amount,
-  sub,
-}: {
-  label: string;
-  amount: number;
-  sub?: string;
-}) {
+function HeroCard({ label, amount }: { label: string; amount: number }) {
   const isNegative = amount < 0;
   return (
     <Card className="flex-1 rounded-3xl gap-0 py-0 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.74_0.13_28_/_0.25)]">
@@ -54,131 +45,51 @@ function HeroCard({
             isNegative ? "text-destructive" : "text-foreground",
           ].join(" ")}
         >
+          {isNegative && (
+            <span className="mr-0.5 align-baseline opacity-80">−</span>
+          )}
           <span className="text-xl mr-0.5 align-baseline opacity-70">¥</span>
           {Math.abs(amount).toLocaleString()}
         </p>
-        {sub && (
-          <p className="text-[10px] text-muted-foreground/60">{sub}</p>
-        )}
       </div>
     </Card>
   );
 }
 
-// ---- セクション見出し --------------------------------------------------------
-
-function SectionHeading({ children }: { children: string }) {
-  return (
-    <div className="flex items-center gap-3 px-1">
-      <span className="h-px flex-1 bg-border" aria-hidden />
-      <span className="text-[11px] font-semibold text-muted-foreground/70 tracking-wider">
-        {children}
-      </span>
-      <span className="h-px flex-1 bg-border" aria-hidden />
-    </div>
-  );
-}
-
-// ---- バーチャート用カスタム Tooltip --------------------------------------------
+// ---- グラフ用カスタム Tooltip -------------------------------------------------
 
 function ChartTooltip({
   active,
   payload,
 }: {
   active?: boolean;
-  payload?: { value: number; payload: MonthlyBreakdown }[];
+  payload?: { payload: MonthlyBreakdown }[];
 }) {
   if (!active || !payload?.length) return null;
-  const { value, payload: d } = payload[0];
+  const d = payload[0].payload;
+  const isOver = d.savedAmount < 0;
   return (
-    <div className="bg-card border border-border/40 rounded-xl px-3 py-2 shadow-[0_2px_12px_-4px_oklch(0.30_0.02_30_/_0.15)] text-[12px]">
+    <div className="bg-card border border-border/40 rounded-xl px-3 py-2.5 shadow-[0_2px_12px_-4px_oklch(0.30_0.02_30_/_0.15)] text-[12px] space-y-1">
       <p className="font-semibold text-foreground">{d.yearMonth}</p>
-      <p className={value >= 0 ? "text-primary" : "text-destructive"}>
-        節約 {value >= 0 ? "+" : ""}¥{value.toLocaleString()}
-      </p>
-    </div>
-  );
-}
-
-// ---- 月別内訳カード ----------------------------------------------------------
-
-function MonthlyCard({
-  breakdown,
-  isCurrentMonth,
-}: {
-  breakdown: MonthlyBreakdown;
-  isCurrentMonth: boolean;
-}) {
-  const { yearMonth, totalIncome, normalSpending, totalBudget, savedAmount } =
-    breakdown;
-  const isSaved = savedAmount >= 0;
-  const isEmpty = totalBudget === 0 && normalSpending === 0 && totalIncome === 0;
-
-  return (
-    <Card className="rounded-2xl gap-0 py-0 ring-1 ring-foreground/[0.06] shadow-[0_1px_4px_-2px_oklch(0.30_0.02_30_/_0.08)]">
-      <div className="px-5 py-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <p className="text-[13px] font-semibold text-foreground">{yearMonth}</p>
-            {isCurrentMonth && (
-              <span className="text-[10px] font-medium text-muted-foreground/60 bg-muted rounded-full px-1.5 py-0.5 leading-none">
-                暫定
-              </span>
-            )}
-          </div>
-          {!isEmpty && (
-            <span
-              className={[
-                "text-[11px] font-bold px-2.5 py-0.5 rounded-full",
-                isSaved
-                  ? "bg-emerald-100/70 text-emerald-700"
-                  : "bg-destructive/10 text-destructive",
-              ].join(" ")}
-            >
-              {isSaved ? "+" : ""}¥{savedAmount.toLocaleString()}
-            </span>
-          )}
-        </div>
-
-        {isEmpty ? (
-          <p className="text-[11px] text-muted-foreground/50 text-center py-1">
-            データなし
-          </p>
-        ) : (
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <MonthlyCell label="入金" amount={totalIncome} />
-            <MonthlyCell label="通常支出" amount={normalSpending} />
-            <MonthlyCell label="予算" amount={totalBudget} />
-          </div>
-        )}
+      <div className="space-y-0.5 text-muted-foreground">
+        <p>予算 ¥{d.totalBudget.toLocaleString()}</p>
+        <p>支出 ¥{d.normalSpending.toLocaleString()}</p>
       </div>
-    </Card>
-  );
-}
-
-function MonthlyCell({ label, amount }: { label: string; amount: number }) {
-  return (
-    <div className="space-y-0.5">
-      <p className="text-[10px] text-muted-foreground">{label}</p>
-      <p className="font-numeric tabular-nums text-[13px] font-semibold text-foreground">
-        ¥{amount.toLocaleString()}
+      <p className={["font-semibold", isOver ? "text-destructive" : "text-primary"].join(" ")}>
+        節約 {isOver ? "−" : "+"}¥{Math.abs(d.savedAmount).toLocaleString()}
       </p>
     </div>
   );
 }
 
-// ---- 直近 N ヶ月リスト（新しい月が先頭）------------------------------------
+// ---- 直近 N ヶ月リスト（新しい月が先頭）--------------------------------------
 
 function buildRecentMonths(currentMonth: string, count: number): string[] {
   const [year, month] = currentMonth.split("-").map(Number);
-  const months: string[] = [];
-  for (let i = 0; i < count; i++) {
+  return Array.from({ length: count }, (_, i) => {
     const d = new Date(year, month - 1 - i, 1);
-    months.push(
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
-    );
-  }
-  return months;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
 }
 
 const EMPTY_BREAKDOWN = (yearMonth: string): MonthlyBreakdown => ({
@@ -199,49 +110,44 @@ export default function SavingsPage() {
     monthlyBreakdowns.map((b) => [b.yearMonth, b]),
   );
 
-  const recentMonths = buildRecentMonths(currentMonth, 6);
-
-  const chartData = recentMonths
-    .slice()
+  const chartData = buildRecentMonths(currentMonth, 6)
     .reverse()
     .map((m) => breakdownByMonth[m] ?? EMPTY_BREAKDOWN(m));
 
   return (
     <PageLayout>
-      {/* ページタイトル */}
-      <section className="space-y-1 pb-1">
-        <p className="text-[11px] font-medium text-muted-foreground/70 tracking-wider">
-          貯金
-        </p>
-        <p className="text-base font-bold text-foreground leading-snug">
+      {/* ページヘッダー（財布画面と同パターン） */}
+      <div className="space-y-0.5 px-1">
+        <h1 className="text-lg font-bold text-foreground">貯金</h1>
+        <p className="text-xs text-muted-foreground">
           今までの貯金状況を整理します
         </p>
-      </section>
+      </div>
 
-      {/* ① ヒーロー: 推定残高と累計貯金額 */}
+      {/* ① ヒーロー: 口座残高と累計貯金額 */}
       <section className="flex gap-3">
-        <HeroCard
-          label="推定残高"
-          amount={estimatedBalance}
-          sub="全入金 − 全支出（目安）"
-        />
-        <HeroCard
-          label="累計貯金額"
-          amount={totalSavings}
-          sub="通常財布の節約の積み上げ"
-        />
+        <HeroCard label="口座残高" amount={estimatedBalance} />
+        <HeroCard label="累計貯金額" amount={totalSavings} />
       </section>
 
-      {/* ② 月別節約額グラフ（直近6ヶ月） */}
+      {/* ② 月別節約額グラフ（直近6ヶ月・予算と支出の推移） */}
       <section className="space-y-3">
-        <SectionHeading>月別節約額</SectionHeading>
+        <div className="flex items-center gap-3 px-1">
+          <span className="h-px flex-1 bg-border" aria-hidden />
+          <span className="text-[11px] font-semibold text-muted-foreground/70 tracking-wider">
+            月別推移
+          </span>
+          <span className="h-px flex-1 bg-border" aria-hidden />
+        </div>
         <Card className="rounded-3xl gap-0 py-0 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.10)]">
-          <div className="px-4 pt-5 pb-4">
-            <ResponsiveContainer width="100%" height={140}>
+          <div className="px-4 pt-5 pb-3">
+            <ResponsiveContainer width="100%" height={150}>
               <BarChart
                 data={chartData}
                 margin={{ top: 4, right: 0, bottom: 0, left: 0 }}
-                barSize={24}
+                barSize={14}
+                barGap={2}
+                barCategoryGap="28%"
               >
                 <XAxis
                   dataKey="yearMonth"
@@ -251,43 +157,54 @@ export default function SavingsPage() {
                   tickFormatter={(v: string) => v.slice(5)}
                 />
                 <YAxis hide />
-                <ReferenceLine
-                  y={0}
-                  stroke="oklch(0.93 0.008 60)"
-                  strokeWidth={1}
-                />
                 <Tooltip
                   content={<ChartTooltip />}
                   cursor={{ fill: "oklch(0.96 0.008 60 / 0.5)" }}
                 />
-                <Bar dataKey="savedAmount" radius={[4, 4, 0, 0]}>
+                {/* 予算バー（薄色） */}
+                <Bar
+                  dataKey="totalBudget"
+                  fill="oklch(0.90 0.008 60)"
+                  radius={[3, 3, 0, 0]}
+                />
+                {/* 支出バー（超過時は警告色） */}
+                <Bar dataKey="normalSpending" radius={[3, 3, 0, 0]}>
                   {chartData.map((entry) => (
                     <Cell
                       key={entry.yearMonth}
                       fill={
-                        entry.savedAmount >= 0
-                          ? "oklch(0.74 0.13 28)"
-                          : "oklch(0.66 0.15 25)"
+                        entry.totalBudget > 0 &&
+                        entry.normalSpending > entry.totalBudget
+                          ? "oklch(0.66 0.15 25)"
+                          : "oklch(0.74 0.13 28)"
                       }
                     />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
+
+            {/* 凡例 */}
+            <div className="flex gap-4 mt-1 px-1">
+              <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                <span
+                  className="size-2 rounded-sm"
+                  style={{ backgroundColor: "oklch(0.90 0.008 60)" }}
+                  aria-hidden
+                />
+                予算
+              </span>
+              <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                <span
+                  className="size-2 rounded-sm"
+                  style={{ backgroundColor: "oklch(0.74 0.13 28)" }}
+                  aria-hidden
+                />
+                支出
+              </span>
+            </div>
           </div>
         </Card>
-      </section>
-
-      {/* ③ 月別内訳リスト（直近6ヶ月） */}
-      <section className="space-y-3">
-        <SectionHeading>月別内訳</SectionHeading>
-        {recentMonths.map((yearMonth) => (
-          <MonthlyCard
-            key={yearMonth}
-            breakdown={breakdownByMonth[yearMonth] ?? EMPTY_BREAKDOWN(yearMonth)}
-            isCurrentMonth={yearMonth === currentMonth}
-          />
-        ))}
       </section>
     </PageLayout>
   );
