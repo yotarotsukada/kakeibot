@@ -8,10 +8,16 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { NavLink } from "react-router";
 
-const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+const navLinkClass = ({
+  isActive,
+  isPending,
+}: {
+  isActive: boolean;
+  isPending: boolean;
+}) =>
   [
     "flex-1 flex flex-col items-center justify-center gap-0.5 text-[11px] font-semibold tracking-wide transition-all",
-    isActive
+    isActive || isPending
       ? "text-primary"
       : "text-muted-foreground/60 hover:text-foreground",
   ].join(" ");
@@ -28,60 +34,60 @@ export function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 h-[68px] bg-background/90 backdrop-blur-xl border-t border-border/60 flex items-stretch z-40 pb-[env(safe-area-inset-bottom)]">
       <NavLink to="/" end className={navLinkClass}>
-        {({ isActive }) => (
+        {({ isActive, isPending }) => (
           <>
             <HugeiconsIcon
               icon={Coins01Icon}
               size={22}
-              strokeWidth={isActive ? 2 : 1.5}
+              strokeWidth={isActive || isPending ? 2 : 1.5}
             />
             <span>家計</span>
           </>
         )}
       </NavLink>
       <NavLink to="/calendar" className={navLinkClass}>
-        {({ isActive }) => (
+        {({ isActive, isPending }) => (
           <>
             <HugeiconsIcon
               icon={Calendar03Icon}
               size={22}
-              strokeWidth={isActive ? 2 : 1.5}
+              strokeWidth={isActive || isPending ? 2 : 1.5}
             />
             <span>カレンダー</span>
           </>
         )}
       </NavLink>
       <NavLink to="/budget" className={navLinkClass}>
-        {({ isActive }) => (
+        {({ isActive, isPending }) => (
           <>
             <HugeiconsIcon
               icon={PiggyBankIcon}
               size={22}
-              strokeWidth={isActive ? 2 : 1.5}
+              strokeWidth={isActive || isPending ? 2 : 1.5}
             />
             <span>予算</span>
           </>
         )}
       </NavLink>
       <NavLink to="/special-wallets" className={navLinkClass}>
-        {({ isActive }) => (
+        {({ isActive, isPending }) => (
           <>
             <HugeiconsIcon
               icon={Wallet01Icon}
               size={22}
-              strokeWidth={isActive ? 2 : 1.5}
+              strokeWidth={isActive || isPending ? 2 : 1.5}
             />
             <span>財布</span>
           </>
         )}
       </NavLink>
       <NavLink to="/savings" className={navLinkClass}>
-        {({ isActive }) => (
+        {({ isActive, isPending }) => (
           <>
             <HugeiconsIcon
               icon={SavingsIcon}
               size={22}
-              strokeWidth={isActive ? 2 : 1.5}
+              strokeWidth={isActive || isPending ? 2 : 1.5}
             />
             <span>貯金</span>
           </>
