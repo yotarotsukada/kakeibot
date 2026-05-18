@@ -9,7 +9,7 @@ import {
   ValidationError,
   wrapUnknownError,
 } from "~/domain/errors";
-import type { LedgerEntryWithId } from "~/domain/storage";
+import type { IncomeEntryWithId, LedgerEntryWithId, SpendingEntryWithId } from "~/domain/storage";
 import { createStorage } from "~/infra/factory";
 import {
   type ActionError,
@@ -19,6 +19,13 @@ import {
 import { requireAuth } from "~/lib/auth";
 import { buildMonthRange, getCurrentMonthJST, isValidMonth } from "~/lib/date";
 import type { Route } from "./+types/calendar";
+
+// ---- 入金表示用カラー --------------------------------------------------------
+
+const COLOR_INCOME_BG     = "oklch(0.93 0.02 165)";  // 入金カード背景（落ち着いた薄緑）
+const COLOR_INCOME_DOT    = "oklch(0.68 0.09 165)";  // 入金ドット
+const COLOR_INCOME_AMOUNT = "oklch(0.48 0.10 165)";  // 入金カード内の金額テキスト
+const COLOR_INCOME_TOTAL  = "oklch(0.55 0.10 165)";  // 日別パネルの入金合計テキスト
 
 export function meta(_args: Route.MetaArgs) {
   return [{ title: "ふたりの家計簿 | カレンダー" }];
@@ -127,7 +134,7 @@ export async function action({
 type AttributionValue = `CATEGORY:${string}` | `WALLET:${string}`;
 
 function encodeAttribution(
-  entry: LedgerEntryWithId,
+  entry: SpendingEntryWithId,
   monthlyWalletName: string,
   specialWalletNames: string[],
   categories: string[],
@@ -168,7 +175,7 @@ function EntryRow({
   monthlyWalletName,
   userNames,
 }: {
-  entry: LedgerEntryWithId;
+  entry: SpendingEntryWithId;
   categories: string[];
   colorMap: Map<string, string>;
   specialWalletNames: string[];
@@ -405,6 +412,44 @@ function EntryRow({
   );
 }
 
+// ---- 入金行（カテゴリ・財布の選択なし） ----------------------------------
+
+function IncomeRow({ entry }: { entry: IncomeEntryWithId }) {
+  return (
+    <div
+      className="rounded-2xl px-4 py-3 flex items-start gap-3"
+      style={{ backgroundColor: COLOR_INCOME_BG }}
+    >
+      <div className="flex-1 min-w-0 space-y-1.5">
+        <div className="flex items-center gap-2">
+          <span
+            className="size-2 rounded-full shrink-0 mt-px"
+            style={{ backgroundColor: COLOR_INCOME_DOT }}
+            aria-hidden
+          />
+          <span className="text-[13px] font-medium text-foreground/80">
+            入金
+          </span>
+          <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full border border-border/40 text-muted-foreground/70">
+            {entry.actor}
+          </span>
+        </div>
+        {entry.memo && (
+          <p className="text-[11px] text-muted-foreground/65 truncate pl-4">
+            {entry.memo}
+          </p>
+        )}
+      </div>
+      <span
+        className="font-numeric tabular-nums font-bold text-base shrink-0 pt-0.5"
+        style={{ color: COLOR_INCOME_AMOUNT }}
+      >
+        +¥{entry.amount.toLocaleString()}
+      </span>
+    </div>
+  );
+}
+
 // ---- 日別パネル（スライドアップ、オーバーレイなし） ----------------------
 
 function DayDetailPanel({
@@ -441,8 +486,11 @@ function DayDetailPanel({
 
   const [, m, d] = date.split("-");
   const label = `${Number(m)}月${Number(d)}日`;
-  const total = entries
+  const totalSpending = entries
     .filter((e) => e.type === "支出")
+    .reduce((s, e) => s + e.amount, 0);
+  const totalIncome = entries
+    .filter((e) => e.type === "入金")
     .reduce((s, e) => s + e.amount, 0);
 
   return (
@@ -464,12 +512,24 @@ function DayDetailPanel({
         <div className="flex items-start justify-between px-5 pb-3">
           <div>
             <p className="font-bold text-lg leading-tight">{label}</p>
-            {total > 0 && (
-              <div className="flex items-baseline gap-1 mt-0.5">
-                <span className="text-[11px] text-muted-foreground">支出</span>
-                <span className="font-numeric tabular-nums font-bold text-base text-primary">
-                  ¥{total.toLocaleString()}
-                </span>
+            {(totalSpending > 0 || totalIncome > 0) && (
+              <div className="flex items-center gap-3 mt-0.5">
+                {totalSpending > 0 && (
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[11px] text-muted-foreground">支出</span>
+                    <span className="font-numeric tabular-nums font-bold text-base text-primary">
+                      ¥{totalSpending.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+                {totalIncome > 0 && (
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[11px] text-muted-foreground">入金</span>
+                    <span className="font-numeric tabular-nums font-bold text-base" style={{ color: COLOR_INCOME_TOTAL }}>
+                      +¥{totalIncome.toLocaleString()}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -490,18 +550,22 @@ function DayDetailPanel({
               この日の記録はありません
             </p>
           ) : (
-            entries.map((entry) => (
-              <EntryRow
-                key={entry.id}
-                entry={entry}
-                categories={categories}
-                colorMap={colorMap}
-                specialWalletNames={specialWalletNames}
-                unsettledSpecialWallets={unsettledSpecialWallets}
-                monthlyWalletName={monthlyWalletName}
-                userNames={userNames}
-              />
-            ))
+            entries.map((entry) =>
+              entry.type === "入金" ? (
+                <IncomeRow key={entry.id} entry={entry} />
+              ) : (
+                <EntryRow
+                  key={entry.id}
+                  entry={entry}
+                  categories={categories}
+                  colorMap={colorMap}
+                  specialWalletNames={specialWalletNames}
+                  unsettledSpecialWallets={unsettledSpecialWallets}
+                  monthlyWalletName={monthlyWalletName}
+                  userNames={userNames}
+                />
+              ),
+            )
           )}
         </div>
       </div>
@@ -532,11 +596,22 @@ export default function CalendarPage() {
 
   const [year, month] = selectedMonth.split("-").map(Number);
 
-  // 日別支出合計マップ（全財布の明細を含む）
+  // 日別支出合計マップ
   const dailyTotals = useMemo(() => {
     const map: Record<string, number> = {};
     for (const e of entries) {
       if (e.type === "支出") {
+        map[e.date] = (map[e.date] ?? 0) + e.amount;
+      }
+    }
+    return map;
+  }, [entries]);
+
+  // 日別入金合計マップ
+  const dailyIncomes = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const e of entries) {
+      if (e.type === "入金") {
         map[e.date] = (map[e.date] ?? 0) + e.amount;
       }
     }
@@ -576,6 +651,7 @@ export default function CalendarPage() {
           year={year}
           month={month}
           dailyTotals={dailyTotals}
+          dailyIncomes={dailyIncomes}
           selectedDate={selectedDate}
           onDateSelect={handleDateSelect}
         />

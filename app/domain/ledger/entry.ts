@@ -5,59 +5,95 @@
  * スキーマから型を導出することで宣言と検証を一箇所に集約する。
  * valibot はインフラ固有ライブラリではなく、型不変条件を表現するための
  * 言語的ツールとして位置づけ、domain への依存を許容する。
+ *
+ * 設計: docs/spec/data-model.md §3
  */
 
 import * as v from "valibot";
 
+// ---- 共通フィールド定義 ----
+
+const dateField = v.optional(
+  v.union([
+    v.pipe(
+      v.string(),
+      v.regex(/^\d{4}-\d{2}-\d{2}$/, "日付は YYYY-MM-DD 形式"),
+    ),
+    v.literal(""),
+  ]),
+  "",
+);
+
+const amountField = v.pipe(v.number(), v.integer(), v.minValue(1));
+
 // ---- ParsedEntry: AI パーサーが返す解析結果 ----
 
 /**
- * AI パーサーが返す解析結果のスキーマ（1 メッセージ = 1 エントリ）。
- *
- * ドメイン不変条件:
- * - date は YYYY-MM-DD 形式（toLedgerEntry で year/month を分割するため必須）
- * - amount は 1 以上の整数
- * - type は "入金" または "支出" の二値
- *
- * wallet / shouldSettle / actor は AI の責務外であり、
- * features 層でプログラマティックに付与する。
+ * 入金の AI 解析結果。財布・カテゴリ・精算フラグはドメインとして不要。
  */
-export const ParsedEntrySchema = v.object({
-  date: v.optional(
-    v.union([
-      v.pipe(
-        v.string(),
-        v.regex(/^\d{4}-\d{2}-\d{2}$/, "日付は YYYY-MM-DD 形式"),
-      ),
-      v.literal(""),
-    ]),
-    "",
-  ),
-  type: v.picklist(["入金", "支出"]),
-  amount: v.pipe(v.number(), v.integer(), v.minValue(1)),
+export const ParsedIncomeSchema = v.object({
+  type: v.literal("入金"),
+  date: dateField,
+  amount: amountField,
+  memo: v.string(),
+});
+
+/**
+ * 支出の AI 解析結果。予算照合・貯金計算のためカテゴリが必要。
+ */
+export const ParsedSpendingSchema = v.object({
+  type: v.literal("支出"),
+  date: dateField,
+  amount: amountField,
   category: v.string(),
   memo: v.string(),
 });
 
-/** ParsedEntry 型はスキーマから導出する（インターフェースとの二重定義を防ぐ）。 */
+/**
+ * AI パーサーが返す解析結果。type で discriminate する variant union。
+ */
+export const ParsedEntrySchema = v.variant("type", [
+  ParsedIncomeSchema,
+  ParsedSpendingSchema,
+]);
+
+export type ParsedIncome = v.InferOutput<typeof ParsedIncomeSchema>;
+export type ParsedSpending = v.InferOutput<typeof ParsedSpendingSchema>;
 export type ParsedEntry = v.InferOutput<typeof ParsedEntrySchema>;
 
-// ---- LedgerEntry: 元帳の 1 行。Storage に書き込む最終形 ----
+// ---- ドメイン型: features 層が扱う ----
 
 /**
- * LedgerEntry は自コードで構築する（外部入力ではない）ため、
- * 通常の interface として宣言する。
+ * 入金エントリ。「口座にお金が入ってきた」という事実のみを記録する。
+ * 財布・カテゴリ・精算フラグはドメインとして存在しない（設計: docs/spec/savings.md §4）。
+ * 自コードで構築するため interface として宣言する。
  */
-export interface LedgerEntry {
+export interface IncomeEntry {
   date: string;
-  type: "入金" | "支出";
+  type: "入金";
   amount: number;
   actor: string;
-  category: string;
-  wallet: string;
-  shouldSettle: boolean;
   memo: string;
 }
+
+/**
+ * 支出エントリ。「どの財布のどのカテゴリに対する出費か」を持つ。
+ * 予算照合・貯金計算・精算計算はすべてこのフィールドに依存する。
+ * 自コードで構築するため interface として宣言する。
+ */
+export interface SpendingEntry {
+  date: string;
+  type: "支出";
+  amount: number;
+  actor: string;
+  memo: string;
+  wallet: string;
+  category: string;
+  shouldSettle: boolean;
+}
+
+/** features 層が扱う元帳エントリの union 型。 */
+export type LedgerEntry = IncomeEntry | SpendingEntry;
 
 // ---- ParserInput: AI パーサーへの入力 ----
 

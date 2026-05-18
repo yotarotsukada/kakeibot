@@ -13,6 +13,19 @@ export class MockReceiptParser implements ReceiptParser {
     const now = new Date();
     const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
+    // 入金と明示されている場合は ParsedIncome を返す
+    if (
+      input.text?.includes("入金") ||
+      input.text?.includes("チャージ") ||
+      input.text?.includes("振り込み")
+    ) {
+      const m = input.text.match(/(\d+)円/);
+      const amount = m ? Number.parseInt(m[1], 10) : 50000;
+      const memo = `モック: ${input.text.slice(0, 30)}`;
+      console.log(`[MockReceiptParser] 📊 入金 ¥${amount}`);
+      return { date, type: "入金", amount, memo };
+    }
+
     let amount = 1500;
     let category = "食費";
     let memo = "モック: テスト店舗";

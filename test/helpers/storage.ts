@@ -1,6 +1,13 @@
 import type { BudgetRecord, Wallet } from "~/domain/budget/budget";
-import type { LedgerEntry } from "~/domain/ledger/entry";
-import type { LedgerEntryWithId, Storage, User } from "~/domain/storage";
+import type { LedgerEntry, SpendingEntry } from "~/domain/ledger/entry";
+import type {
+  LedgerEntryWithId,
+  PoolOperation,
+  PoolOperationWithId,
+  SpendingEntryWithId,
+  Storage,
+  User,
+} from "~/domain/storage";
 
 type StoredEntry = LedgerEntry & { id: string };
 
@@ -9,6 +16,7 @@ type TestStorageInit = {
   budgets?: BudgetRecord[];
   ledger?: StoredEntry[];
   users?: Record<string, string>;
+  poolOps?: PoolOperationWithId[];
 };
 
 /**
@@ -20,6 +28,7 @@ export function createTestStorage(init: TestStorageInit = {}): Storage {
   let budgets: BudgetRecord[] = structuredClone(init.budgets ?? []);
   const ledger: StoredEntry[] = structuredClone(init.ledger ?? []);
   const users = new Map(Object.entries(init.users ?? {}));
+  const poolOps: PoolOperationWithId[] = structuredClone(init.poolOps ?? []);
   let idSeq = 0;
 
   return {
@@ -79,7 +88,7 @@ export function createTestStorage(init: TestStorageInit = {}): Storage {
         if (b.walletName === oldName) b.walletName = newName;
       }
       for (const e of ledger) {
-        if (e.wallet === oldName) e.wallet = newName;
+        if (e.type === "支出" && e.wallet === oldName) e.wallet = newName;
       }
     },
 
@@ -88,27 +97,45 @@ export function createTestStorage(init: TestStorageInit = {}): Storage {
       if (wallet) wallet.settled = settled;
     },
 
-    async getLedgerEntriesByWallet(walletName: string) {
+    async getLedgerEntriesByWallet(
+      walletName: string,
+    ): Promise<SpendingEntryWithId[]> {
       return ledger
-        .filter((e) => e.wallet === walletName)
-        .map(({ id: _id, ...entry }) => entry);
-    },
-
-    async getLedgerEntriesForCalendar(walletName: string): Promise<LedgerEntryWithId[]> {
-      return ledger
-        .filter((e) => e.wallet === walletName)
+        .filter(
+          (e): e is SpendingEntry & { id: string } =>
+            e.type === "支出" && e.wallet === walletName,
+        )
         .map(({ id, ...entry }) => ({ id, ...entry }));
     },
 
-    async getLedgerEntriesByMonth(yearMonth: string): Promise<LedgerEntryWithId[]> {
+    async getLedgerEntriesForCalendar(
+      walletName: string,
+    ): Promise<SpendingEntryWithId[]> {
+      return ledger
+        .filter(
+          (e): e is SpendingEntry & { id: string } =>
+            e.type === "支出" && e.wallet === walletName,
+        )
+        .map(({ id, ...entry }) => ({ id, ...entry }));
+    },
+
+    async getLedgerEntriesByMonth(
+      yearMonth: string,
+    ): Promise<LedgerEntryWithId[]> {
       return ledger
         .filter((e) => e.date.startsWith(yearMonth))
         .map(({ id, ...entry }) => ({ id, ...entry }));
     },
 
+    async getAllLedgerEntries(): Promise<LedgerEntryWithId[]> {
+      return ledger.map(({ id, ...entry }) => ({ id, ...entry }));
+    },
+
     async updateLedgerEntryCategory(entryId: string, categoryName: string) {
       const entry = ledger.find((e) => e.id === entryId);
-      if (entry) entry.category = categoryName;
+      if (entry && entry.type === "支出") {
+        entry.category = categoryName;
+      }
     },
 
     async updateLedgerEntryAttribution(
@@ -117,7 +144,7 @@ export function createTestStorage(init: TestStorageInit = {}): Storage {
       categoryName: string,
     ) {
       const entry = ledger.find((e) => e.id === entryId);
-      if (entry) {
+      if (entry && entry.type === "支出") {
         entry.wallet = walletName;
         entry.category = categoryName;
       }
@@ -129,8 +156,11 @@ export function createTestStorage(init: TestStorageInit = {}): Storage {
     },
 
     async getLatestLedgerEntry() {
-      if (ledger.length === 0) return null;
-      const latest = ledger.reduce((prev, cur) =>
+      const spending = ledger.filter(
+        (e): e is SpendingEntry & { id: string } => e.type === "支出",
+      );
+      if (spending.length === 0) return null;
+      const latest = spending.reduce((prev, cur) =>
         cur.date > prev.date ? cur : prev,
       );
       return { walletName: latest.wallet, date: latest.date };
@@ -141,6 +171,21 @@ export function createTestStorage(init: TestStorageInit = {}): Storage {
         lineUserId,
         name,
       }));
+    },
+
+    async deletePoolOperation(id: string) {
+      const idx = poolOps.findIndex((op) => op.id === id);
+      if (idx !== -1) poolOps.splice(idx, 1);
+    },
+
+    async appendPoolOperations(operations: PoolOperation[]) {
+      for (const op of operations) {
+        poolOps.push({ id: `pool-${idSeq++}`, ...op });
+      }
+    },
+
+    async getAllPoolOperations(): Promise<PoolOperationWithId[]> {
+      return [...poolOps];
     },
   };
 }

@@ -7,7 +7,14 @@ import { importPKCS8, SignJWT } from "jose";
 import type { BudgetRecord, Wallet } from "~/domain/budget/budget";
 import { GoogleSheetsError } from "~/domain/errors";
 import type { LedgerEntry } from "~/domain/ledger/entry";
-import type { LedgerEntryWithId, Storage, User } from "~/domain/storage";
+import type {
+  LedgerEntryWithId,
+  PoolOperation,
+  PoolOperationWithId,
+  SpendingEntryWithId,
+  Storage,
+  User,
+} from "~/domain/storage";
 import { SHEET_NAMES } from "~/domain/storage";
 
 const SHEETS_BASE = "https://sheets.googleapis.com/v4/spreadsheets";
@@ -35,9 +42,9 @@ export class GoogleSheetsStorage implements Storage {
         e.type,
         e.amount,
         e.actor,
-        e.category,
-        e.wallet,
-        e.shouldSettle ? "TRUE" : "FALSE",
+        e.type === "支出" ? e.category : "",
+        e.type === "支出" ? e.wallet : "",
+        e.type === "支出" ? (e.shouldSettle ? "TRUE" : "FALSE") : "",
         e.memo,
       ]);
 
@@ -421,9 +428,10 @@ export class GoogleSheetsStorage implements Storage {
     }
   }
 
-  async getLedgerEntriesByWallet(walletName: string): Promise<LedgerEntry[]> {
-    const entries = await this.getLedgerEntriesForCalendar(walletName);
-    return entries.map(({ id: _id, ...entry }) => entry);
+  async getLedgerEntriesByWallet(
+    walletName: string,
+  ): Promise<SpendingEntryWithId[]> {
+    return this.getLedgerEntriesForCalendar(walletName);
   }
 
   async getLatestLedgerEntry(): Promise<{
@@ -432,6 +440,7 @@ export class GoogleSheetsStorage implements Storage {
   } | null> {
     try {
       const token = await this.getAccessToken();
+      // type(C), wallet(G) を持つ支出エントリのみを対象とする
       const range = `${SHEET_NAMES.LEDGER}!B:G`;
       const url = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(range)}`;
       const res = await fetch(url, {
@@ -440,7 +449,8 @@ export class GoogleSheetsStorage implements Storage {
       if (!res.ok) return null;
       const data = (await res.json()) as { values?: string[][] };
       if (!data.values || data.values.length <= 1) return null;
-      const rows = data.values.slice(1).filter((row) => row[0] && row[5]);
+      // row[1]=type, row[5]=wallet; 支出かつ財布が設定されているもの
+      const rows = data.values.slice(1).filter((row) => row[0] && row[1] === "支出" && row[5]);
       if (rows.length === 0) return null;
       const latest = rows.reduce((prev, cur) =>
         cur[0] > prev[0] ? cur : prev,
@@ -453,7 +463,7 @@ export class GoogleSheetsStorage implements Storage {
 
   async getLedgerEntriesForCalendar(
     walletName: string,
-  ): Promise<LedgerEntryWithId[]> {
+  ): Promise<SpendingEntryWithId[]> {
     try {
       const token = await this.getAccessToken();
       const range = `${SHEET_NAMES.LEDGER}!A:I`;
@@ -467,10 +477,10 @@ export class GoogleSheetsStorage implements Storage {
       return data.values
         .slice(1)
         .filter((row) => row[6] === walletName)
-        .map((row) => ({
+        .map((row): SpendingEntryWithId => ({
           id: row[0],
           date: row[1],
-          type: row[2] as "入金" | "支出",
+          type: "支出",
           amount: Number(row[3]) || 0,
           actor: row[4],
           category: row[5],
@@ -541,17 +551,24 @@ export class GoogleSheetsStorage implements Storage {
       return data.values
         .slice(1)
         .filter((row) => row[1]?.startsWith(yearMonth))
-        .map((row) => ({
-          id: row[0],
-          date: row[1],
-          type: row[2] as "入金" | "支出",
-          amount: Number(row[3]) || 0,
-          actor: row[4],
-          category: row[5],
-          wallet: row[6],
-          shouldSettle: row[7] === "TRUE",
-          memo: row[8] ?? "",
-        }));
+        .map(rowToLedgerEntryWithId);
+    } catch (err) {
+      throw new GoogleSheetsError("元帳の取得に失敗しました", err);
+    }
+  }
+
+  async getAllLedgerEntries(): Promise<LedgerEntryWithId[]> {
+    try {
+      const token = await this.getAccessToken();
+      const range = `${SHEET_NAMES.LEDGER}!A:I`;
+      const url = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(range)}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return [];
+      const data = (await res.json()) as { values?: string[][] };
+      if (!data.values) return [];
+      return data.values.slice(1).filter((row) => row[0]).map(rowToLedgerEntryWithId);
     } catch (err) {
       throw new GoogleSheetsError("元帳の取得に失敗しました", err);
     }
@@ -695,6 +712,97 @@ export class GoogleSheetsStorage implements Storage {
     }
   }
 
+  async deletePoolOperation(id: string): Promise<void> {
+    try {
+      const token = await this.getAccessToken();
+      const range = `${SHEET_NAMES.SAVINGS_OPS}!A:A`;
+      const readUrl = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(range)}`;
+      const readRes = await fetch(readUrl, { headers: { Authorization: `Bearer ${token}` } });
+      if (!readRes.ok) throw new Error(`Sheets read failed: ${readRes.status}`);
+      const data = (await readRes.json()) as { values?: string[][] };
+      const rows = data.values ?? [];
+      const rowIdx = rows.findIndex((row) => row[0] === id);
+      if (rowIdx === -1) return;
+
+      const metaUrl = `${SHEETS_BASE}/${this.spreadsheetId}?fields=sheets.properties`;
+      const metaRes = await fetch(metaUrl, { headers: { Authorization: `Bearer ${token}` } });
+      if (!metaRes.ok) throw new Error(`Sheets metadata failed: ${metaRes.status}`);
+      const meta = (await metaRes.json()) as {
+        sheets: { properties: { sheetId: number; title: string } }[];
+      };
+      const sheet = meta.sheets.find((s) => s.properties.title === SHEET_NAMES.SAVINGS_OPS);
+      if (!sheet) throw new Error(`シート "${SHEET_NAMES.SAVINGS_OPS}" が見つかりません`);
+
+      const batchUrl = `${SHEETS_BASE}/${this.spreadsheetId}:batchUpdate`;
+      const batchRes = await fetch(batchUrl, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requests: [{ deleteDimension: { range: { sheetId: sheet.properties.sheetId, dimension: "ROWS", startIndex: rowIdx, endIndex: rowIdx + 1 } } }],
+        }),
+      });
+      if (!batchRes.ok) throw new Error(`Sheets delete failed: ${batchRes.status} ${await batchRes.text()}`);
+    } catch (err) {
+      if (err instanceof GoogleSheetsError) throw err;
+      throw new GoogleSheetsError("貯金操作の削除に失敗しました", err);
+    }
+  }
+
+  async appendPoolOperations(operations: PoolOperation[]): Promise<void> {
+    try {
+      const token = await this.getAccessToken();
+      const range = `${SHEET_NAMES.SAVINGS_OPS}!A1`;
+      const rows = operations.map((op) => [
+        generateTransactionId(),
+        op.date,
+        op.type,
+        op.amount,
+        op.actor,
+        op.memo,
+      ]);
+      const url = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ range, majorDimension: "ROWS", values: rows }),
+      });
+      if (!res.ok) {
+        throw new Error(`Sheets append failed: ${res.status} ${await res.text()}`);
+      }
+    } catch (err) {
+      if (err instanceof GoogleSheetsError) throw err;
+      throw new GoogleSheetsError("貯金操作の追記に失敗しました", err);
+    }
+  }
+
+  async getAllPoolOperations(): Promise<PoolOperationWithId[]> {
+    try {
+      const token = await this.getAccessToken();
+      const range = `${SHEET_NAMES.SAVINGS_OPS}!A:F`;
+      const url = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(range)}`;
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) return [];
+      const data = (await res.json()) as { values?: string[][] };
+      if (!data.values) return [];
+      return data.values
+        .slice(1)
+        .filter((row) => row[0])
+        .map((row) => ({
+          id: row[0],
+          date: row[1],
+          type: row[2] === "積立" ? "積立" : "配分",
+          amount: Number(row[3]) || 0,
+          actor: row[4] ?? "",
+          memo: row[5] ?? "",
+        }));
+    } catch (err) {
+      throw new GoogleSheetsError("貯金操作の取得に失敗しました", err);
+    }
+  }
+
   private async getAccessToken(): Promise<string> {
     try {
       const now = Math.floor(Date.now() / 1000);
@@ -737,4 +845,32 @@ export class GoogleSheetsStorage implements Storage {
 
 function generateTransactionId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/**
+ * シート行（A:I）をドメイン型に変換するヘルパー。
+ * type 列（index 2）で IncomeEntry / SpendingEntry を判別する。
+ */
+function rowToLedgerEntryWithId(row: string[]): LedgerEntryWithId {
+  if (row[2] === "入金") {
+    return {
+      id: row[0],
+      date: row[1],
+      type: "入金",
+      amount: Number(row[3]) || 0,
+      actor: row[4],
+      memo: row[8] ?? "",
+    };
+  }
+  return {
+    id: row[0],
+    date: row[1],
+    type: "支出",
+    amount: Number(row[3]) || 0,
+    actor: row[4],
+    category: row[5] ?? "",
+    wallet: row[6] ?? "",
+    shouldSettle: row[7] === "TRUE",
+    memo: row[8] ?? "",
+  };
 }

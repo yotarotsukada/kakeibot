@@ -3,8 +3,15 @@
  */
 
 import type { BudgetRecord, Wallet } from "~/domain/budget/budget";
-import type { LedgerEntry } from "~/domain/ledger/entry";
-import type { LedgerEntryWithId, Storage, User } from "~/domain/storage";
+import type { LedgerEntry, SpendingEntry } from "~/domain/ledger/entry";
+import type {
+  LedgerEntryWithId,
+  PoolOperation,
+  PoolOperationWithId,
+  SpendingEntryWithId,
+  Storage,
+  User,
+} from "~/domain/storage";
 import { SHEET_NAMES } from "~/domain/storage";
 
 type StoredEntry = LedgerEntry & { transactionId: string };
@@ -25,31 +32,47 @@ const SEED_BUDGETS: BudgetRecord[] = [
   { walletName: "2026-05通常", categoryName: "外食費", amount: 20000 },
   { walletName: "2026-04通常", categoryName: "食費", amount: 48000 },
   { walletName: "2026-04通常", categoryName: "日用品費", amount: 28000 },
+  { walletName: "2026-03通常", categoryName: "食費", amount: 48000 },
+  { walletName: "2026-03通常", categoryName: "日用品費", amount: 25000 },
   // 特別財布は合計予算を1件（予約カテゴリ）で保持する
-  {
-    walletName: "沖縄旅行",
-    categoryName: "一括",
-    amount: 200000,
-  },
-  {
-    walletName: "新居家具",
-    categoryName: "一括",
-    amount: 230000,
-  },
-  {
-    walletName: "結婚記念旅行",
-    categoryName: "一括",
-    amount: 120000,
-  },
+  { walletName: "沖縄旅行", categoryName: "一括", amount: 200000 },
+  { walletName: "新居家具", categoryName: "一括", amount: 230000 },
+  { walletName: "結婚記念旅行", categoryName: "一括", amount: 120000 },
 ];
 
 const SEED_LEDGER: StoredEntry[] = [
+  // 入金エントリ（財布なし）
+  {
+    transactionId: "seed-income-001",
+    date: "2026-05-01",
+    type: "入金",
+    amount: 200000,
+    actor: "共同",
+    memo: "5月分生活費入金",
+  },
+  {
+    transactionId: "seed-income-002",
+    date: "2026-04-01",
+    type: "入金",
+    amount: 200000,
+    actor: "共同",
+    memo: "4月分生活費入金",
+  },
+  {
+    transactionId: "seed-income-003",
+    date: "2026-03-01",
+    type: "入金",
+    amount: 200000,
+    actor: "共同",
+    memo: "3月分生活費入金",
+  },
+  // 2026-05通常 の支出
   {
     transactionId: "seed-001",
     date: "2026-05-01",
     type: "支出",
     amount: 12000,
-    actor: "A",
+    actor: "共同",
     category: "食費",
     wallet: "2026-05通常",
     shouldSettle: true,
@@ -60,7 +83,7 @@ const SEED_LEDGER: StoredEntry[] = [
     date: "2026-05-02",
     type: "支出",
     amount: 5000,
-    actor: "B",
+    actor: "共同",
     category: "日用品費",
     wallet: "2026-05通常",
     shouldSettle: true,
@@ -71,7 +94,7 @@ const SEED_LEDGER: StoredEntry[] = [
     date: "2026-05-03",
     type: "支出",
     amount: 8000,
-    actor: "A",
+    actor: "共同",
     category: "食費",
     wallet: "2026-05通常",
     shouldSettle: true,
@@ -82,7 +105,7 @@ const SEED_LEDGER: StoredEntry[] = [
     date: "2026-05-04",
     type: "支出",
     amount: 3000,
-    actor: "B",
+    actor: "共同",
     category: "交通費",
     wallet: "2026-05通常",
     shouldSettle: true,
@@ -93,7 +116,7 @@ const SEED_LEDGER: StoredEntry[] = [
     date: "2026-05-05",
     type: "支出",
     amount: 25000,
-    actor: "A",
+    actor: "共同",
     category: "外食費",
     wallet: "2026-05通常",
     shouldSettle: true,
@@ -104,7 +127,7 @@ const SEED_LEDGER: StoredEntry[] = [
     date: "2026-05-05",
     type: "支出",
     amount: 15000,
-    actor: "B",
+    actor: "共同",
     category: "食費",
     wallet: "2026-05通常",
     shouldSettle: true,
@@ -116,7 +139,7 @@ const SEED_LEDGER: StoredEntry[] = [
     date: "2026-05-06",
     type: "支出",
     amount: 80000,
-    actor: "A",
+    actor: "共同",
     category: "一括",
     wallet: "沖縄旅行",
     shouldSettle: true,
@@ -127,7 +150,7 @@ const SEED_LEDGER: StoredEntry[] = [
     date: "2026-05-07",
     type: "支出",
     amount: 35000,
-    actor: "B",
+    actor: "共同",
     category: "一括",
     wallet: "沖縄旅行",
     shouldSettle: true,
@@ -139,7 +162,7 @@ const SEED_LEDGER: StoredEntry[] = [
     date: "2026-04-15",
     type: "支出",
     amount: 60000,
-    actor: "A",
+    actor: "共同",
     category: "一括",
     wallet: "新居家具",
     shouldSettle: true,
@@ -150,7 +173,7 @@ const SEED_LEDGER: StoredEntry[] = [
     date: "2026-05-02",
     type: "支出",
     amount: 45000,
-    actor: "B",
+    actor: "共同",
     category: "一括",
     wallet: "新居家具",
     shouldSettle: true,
@@ -162,19 +185,19 @@ const SEED_LEDGER: StoredEntry[] = [
     date: "2026-03-10",
     type: "支出",
     amount: 110000,
-    actor: "A",
+    actor: "共同",
     category: "一括",
     wallet: "結婚記念旅行",
     shouldSettle: true,
     memo: "京都温泉旅館",
   },
-  // 2026-04通常 の履歴
+  // 2026-04通常 の支出
   {
     transactionId: "seed-008",
     date: "2026-04-10",
     type: "支出",
     amount: 30000,
-    actor: "A",
+    actor: "共同",
     category: "食費",
     wallet: "2026-04通常",
     shouldSettle: true,
@@ -185,7 +208,7 @@ const SEED_LEDGER: StoredEntry[] = [
     date: "2026-04-20",
     type: "支出",
     amount: 15000,
-    actor: "B",
+    actor: "共同",
     category: "日用品費",
     wallet: "2026-04通常",
     shouldSettle: true,
@@ -196,22 +219,54 @@ const SEED_LEDGER: StoredEntry[] = [
     date: "2026-04-28",
     type: "支出",
     amount: 52000,
-    actor: "A",
+    actor: "共同",
     category: "食費",
     wallet: "2026-04通常",
     shouldSettle: true,
     memo: "月末まとめ買い",
   },
+  // 2026-03通常 の支出
+  {
+    transactionId: "seed-015",
+    date: "2026-03-15",
+    type: "支出",
+    amount: 35000,
+    actor: "共同",
+    category: "食費",
+    wallet: "2026-03通常",
+    shouldSettle: true,
+    memo: "3月食費まとめ",
+  },
+  {
+    transactionId: "seed-016",
+    date: "2026-03-20",
+    type: "支出",
+    amount: 18000,
+    actor: "共同",
+    category: "日用品費",
+    wallet: "2026-03通常",
+    shouldSettle: true,
+    memo: "3月日用品",
+  },
+];
+
+const SEED_POOL_OPERATIONS: (PoolOperation & { transactionId: string })[] = [
+  { transactionId: "seed-pool-001", date: "2026-01-01", type: "積立", amount: 500000, actor: "共同", memo: "初期残高" },
+  { transactionId: "seed-pool-002", date: "2026-03-01", type: "積立", amount: 30000, actor: "共同", memo: "3月分積立" },
+  { transactionId: "seed-pool-003", date: "2026-04-01", type: "積立", amount: 30000, actor: "共同", memo: "4月分積立" },
+  { transactionId: "seed-pool-004", date: "2026-05-01", type: "積立", amount: 30000, actor: "共同", memo: "5月分積立" },
+  { transactionId: "seed-pool-005", date: "2026-04-30", type: "配分", amount: 200000, actor: "共同", memo: "沖縄旅行費用配分" },
 ];
 
 export class MockStorage implements Storage {
-  private ledger: StoredEntry[] = [...SEED_LEDGER];
+  private ledger: StoredEntry[] = structuredClone(SEED_LEDGER);
+  private poolOps: (PoolOperation & { transactionId: string })[] = structuredClone(SEED_POOL_OPERATIONS);
   private users = new Map<string, string>([
     ["U_MOCK_USER_A", "A"],
     ["U_MOCK_USER_B", "B"],
   ]);
-  private wallets: Wallet[] = [...SEED_WALLETS];
-  private budgets: BudgetRecord[] = [...SEED_BUDGETS];
+  private wallets: Wallet[] = structuredClone(SEED_WALLETS);
+  private budgets: BudgetRecord[] = structuredClone(SEED_BUDGETS);
 
   async initialize(): Promise<void> {
     console.log("[MockStorage] 🗄️  初期化:");
@@ -223,9 +278,15 @@ export class MockStorage implements Storage {
     for (const e of entries) {
       const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
       this.ledger.push({ transactionId: id, ...e });
-      console.log(
-        `[MockStorage] 📝 ${SHEET_NAMES.LEDGER}: ${id} | ${e.date} | ${e.type} | ¥${e.amount} | ${e.actor} | ${e.category} | ${e.wallet} | ${e.memo}`,
-      );
+      if (e.type === "支出") {
+        console.log(
+          `[MockStorage] 📝 ${SHEET_NAMES.LEDGER}: ${id} | ${e.date} | 支出 | ¥${e.amount} | ${e.actor} | ${e.category} | ${e.wallet} | ${e.memo}`,
+        );
+      } else {
+        console.log(
+          `[MockStorage] 📝 ${SHEET_NAMES.LEDGER}: ${id} | ${e.date} | 入金 | ¥${e.amount} | ${e.actor} | ${e.memo}`,
+        );
+      }
     }
     console.log(`[MockStorage] 合計 ${this.ledger.length} 件`);
   }
@@ -295,21 +356,24 @@ export class MockStorage implements Storage {
       if (b.walletName === oldName) b.walletName = newName;
     }
     for (const e of this.ledger) {
-      if (e.wallet === oldName) e.wallet = newName;
+      if (e.type === "支出" && e.wallet === oldName) e.wallet = newName;
     }
     console.log(`[MockStorage] 💳 財布名変更: ${oldName} → ${newName}`);
   }
 
-  async getLedgerEntriesByWallet(walletName: string): Promise<LedgerEntry[]> {
-    const entries = await this.getLedgerEntriesForCalendar(walletName);
-    return entries.map(({ id: _id, ...entry }) => entry);
+  async getLedgerEntriesByWallet(
+    walletName: string,
+  ): Promise<SpendingEntryWithId[]> {
+    return this.getLedgerEntriesForCalendar(walletName);
   }
 
   async getLedgerEntriesForCalendar(
     walletName: string,
-  ): Promise<LedgerEntryWithId[]> {
+  ): Promise<SpendingEntryWithId[]> {
     return this.ledger
-      .filter((e) => e.wallet === walletName)
+      .filter((e): e is SpendingEntry & { transactionId: string } =>
+        e.type === "支出" && e.wallet === walletName,
+      )
       .map(({ transactionId, ...entry }) => ({ id: transactionId, ...entry }));
   }
 
@@ -321,12 +385,19 @@ export class MockStorage implements Storage {
       .map(({ transactionId, ...entry }) => ({ id: transactionId, ...entry }));
   }
 
+  async getAllLedgerEntries(): Promise<LedgerEntryWithId[]> {
+    return this.ledger.map(({ transactionId, ...entry }) => ({
+      id: transactionId,
+      ...entry,
+    }));
+  }
+
   async updateLedgerEntryCategory(
     entryId: string,
     categoryName: string,
   ): Promise<void> {
     const entry = this.ledger.find((e) => e.transactionId === entryId);
-    if (entry) {
+    if (entry && entry.type === "支出") {
       entry.category = categoryName;
       console.log(
         `[MockStorage] ✏️  カテゴリ更新: ${entryId} → ${categoryName}`,
@@ -340,7 +411,7 @@ export class MockStorage implements Storage {
     categoryName: string,
   ): Promise<void> {
     const entry = this.ledger.find((e) => e.transactionId === entryId);
-    if (entry) {
+    if (entry && entry.type === "支出") {
       entry.wallet = walletName;
       entry.category = categoryName;
       console.log(
@@ -366,8 +437,11 @@ export class MockStorage implements Storage {
     walletName: string;
     date: string;
   } | null> {
-    if (this.ledger.length === 0) return null;
-    const latest = this.ledger.reduce((prev, cur) =>
+    const spending = this.ledger.filter(
+      (e): e is SpendingEntry & { transactionId: string } => e.type === "支出",
+    );
+    if (spending.length === 0) return null;
+    const latest = spending.reduce((prev, cur) =>
       cur.date > prev.date ? cur : prev,
     );
     return { walletName: latest.wallet, date: latest.date };
@@ -378,5 +452,27 @@ export class MockStorage implements Storage {
       lineUserId,
       name,
     }));
+  }
+
+  async deletePoolOperation(id: string): Promise<void> {
+    const idx = this.poolOps.findIndex((op) => op.transactionId === id);
+    if (idx !== -1) {
+      this.poolOps.splice(idx, 1);
+      console.log(`[MockStorage] 🗑 ${SHEET_NAMES.SAVINGS_OPS}: ${id} 削除`);
+    }
+  }
+
+  async appendPoolOperations(operations: PoolOperation[]): Promise<void> {
+    for (const op of operations) {
+      const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+      this.poolOps.push({ transactionId: id, ...op });
+      console.log(
+        `[MockStorage] 💰 ${SHEET_NAMES.SAVINGS_OPS}: ${id} | ${op.date} | ${op.type} | ¥${op.amount} | ${op.actor} | ${op.memo}`,
+      );
+    }
+  }
+
+  async getAllPoolOperations(): Promise<PoolOperationWithId[]> {
+    return this.poolOps.map(({ transactionId, ...op }) => ({ id: transactionId, ...op }));
   }
 }

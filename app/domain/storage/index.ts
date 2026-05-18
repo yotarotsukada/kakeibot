@@ -4,7 +4,10 @@
  */
 
 import type { BudgetRecord, Wallet } from "~/domain/budget/budget";
-import type { LedgerEntry } from "~/domain/ledger/entry";
+import type { IncomeEntry, LedgerEntry, SpendingEntry } from "~/domain/ledger/entry";
+import type { PoolOperation, PoolOperationWithId } from "~/domain/savings/pool-operation";
+
+export type { PoolOperation, PoolOperationWithId };
 
 export type User = {
   lineUserId: string;
@@ -16,28 +19,64 @@ export const SHEET_NAMES = {
   USER_MASTER: "ユーザーマスタ",
   WALLET_MASTER: "財布マスタ",
   BUDGET: "予算記録",
+  SAVINGS_OPS: "貯金操作",
 } as const;
 
 export type SheetName = (typeof SHEET_NAMES)[keyof typeof SHEET_NAMES];
 
+/** ストレージから読み出した支出エントリ（ID付き）。 */
+export type SpendingEntryWithId = SpendingEntry & { id: string };
+
+/** ストレージから読み出した入金エントリ（ID付き）。 */
+export type IncomeEntryWithId = IncomeEntry & { id: string };
+
+/** ストレージから読み出した元帳エントリ（ID付き）。 */
 export type LedgerEntryWithId = LedgerEntry & { id: string };
 
 export interface Storage {
   initialize(): Promise<void>;
+
+  /** 元帳にエントリを追記する。ID はストレージ層が生成する。 */
   appendLedgerEntries(entries: LedgerEntry[]): Promise<void>;
+
   findActorByLineUserId(lineUserId: string): Promise<string | null>;
 
   getBudgetRecords(walletName: string): Promise<BudgetRecord[]>;
   upsertBudgetRecord(record: BudgetRecord): Promise<void>;
   deleteBudgetRecord(walletName: string, categoryName: string): Promise<void>;
+
   getWallets(): Promise<Wallet[]>;
   upsertWallet(wallet: Wallet): Promise<void>;
   renameWallet(oldName: string, newName: string): Promise<void>;
   setWalletSettled(walletName: string, settled: boolean): Promise<void>;
-  getLedgerEntriesByWallet(walletName: string): Promise<LedgerEntry[]>;
+
+  /**
+   * 指定財布の支出エントリを返す。
+   * 入金エントリは財布を持たないため支出のみが対象になる。
+   */
+  getLedgerEntriesByWallet(walletName: string): Promise<SpendingEntryWithId[]>;
+
+  /**
+   * 直近の支出エントリを返す（walletName を持つ支出のみが対象）。
+   * 入金エントリは walletName を持たないため意図的に除外している。
+   * 支出がまだ存在しない場合は null を返す。
+   */
   getLatestLedgerEntry(): Promise<{ walletName: string; date: string } | null>;
-  getLedgerEntriesForCalendar(walletName: string): Promise<LedgerEntryWithId[]>;
+
+  /**
+   * 指定財布の支出エントリをカレンダー表示用に返す。
+   * 入金エントリは財布を持たないため支出のみが対象になる。
+   */
+  getLedgerEntriesForCalendar(
+    walletName: string,
+  ): Promise<SpendingEntryWithId[]>;
+
+  /** 指定年月のすべてのエントリ（入金・支出）を返す。 */
   getLedgerEntriesByMonth(yearMonth: string): Promise<LedgerEntryWithId[]>;
+
+  /** 全期間・全財布のすべてのエントリ（入金・支出）を返す（推定残高計算用）。 */
+  getAllLedgerEntries(): Promise<LedgerEntryWithId[]>;
+
   updateLedgerEntryCategory(
     entryId: string,
     categoryName: string,
@@ -48,5 +87,15 @@ export interface Storage {
     categoryName: string,
   ): Promise<void>;
   updateLedgerEntryActor(entryId: string, actor: string): Promise<void>;
+
   getUsers(): Promise<User[]>;
+
+  /** 貯金操作シートに追記する。ID はストレージ層が生成する。 */
+  appendPoolOperations(operations: PoolOperation[]): Promise<void>;
+
+  /** 貯金操作シートの全エントリを返す。 */
+  getAllPoolOperations(): Promise<PoolOperationWithId[]>;
+
+  /** 指定 ID の貯金操作エントリを削除する。 */
+  deletePoolOperation(id: string): Promise<void>;
 }
