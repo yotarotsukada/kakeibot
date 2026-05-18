@@ -76,7 +76,7 @@ async function processMessage(
     if (msg.replyToken) {
       await lineClient.reply(
         msg.replyToken,
-        `✅ 登録しました\n${formatEntryDate(entry.date)} ${entry.category}: ¥${entry.amount.toLocaleString()}\n${appBaseUrl}/calendar`,
+        `✅ 登録しました\n${entry.date} ${entry.category}: ¥${entry.amount.toLocaleString()}\n${appBaseUrl}/calendar`,
       );
     }
 
@@ -114,11 +114,6 @@ async function processMessage(
       );
     }
   }
-}
-
-function formatEntryDate(date: string): string {
-  const [y, m, d] = date.split("-");
-  return `${y}/${Number(m)}/${Number(d)}`;
 }
 
 function getTodayJST(): string {
