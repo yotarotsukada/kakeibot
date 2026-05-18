@@ -332,15 +332,31 @@ export default function SavingsPage() {
           </span>
           <span className="h-px flex-1 bg-border" aria-hidden />
         </div>
+
+        {/* 履歴カード */}
         <Card className="rounded-3xl gap-0 py-0 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.10)]">
-          <div className="px-5 pt-4 pb-5 space-y-1">
-            {poolEntries.length > 0 && (
-              <div className="mb-3 divide-y divide-border/40">
+          <div className="px-5 pt-4 pb-3">
+            <p className="text-[11px] font-medium text-muted-foreground/60 tracking-wide mb-3">
+              履歴
+            </p>
+            {poolEntries.length === 0 ? (
+              <p className="text-sm text-muted-foreground/50 py-1">まだ記録がありません</p>
+            ) : (
+              <div className="divide-y divide-border/40">
                 {poolEntries.map((entry) => (
                   <PoolOperationRow key={entry.id} entry={entry} />
                 ))}
               </div>
             )}
+          </div>
+        </Card>
+
+        {/* 登録カード */}
+        <Card className="rounded-3xl gap-0 py-0 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.10)]">
+          <div className="px-5 pt-4 pb-5">
+            <p className="text-[11px] font-medium text-muted-foreground/60 tracking-wide mb-3">
+              登録
+            </p>
             <SavingsEntryForm today={today} />
           </div>
         </Card>
