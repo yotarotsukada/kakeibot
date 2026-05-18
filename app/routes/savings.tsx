@@ -333,6 +333,16 @@ export default function SavingsPage() {
           <span className="h-px flex-1 bg-border" aria-hidden />
         </div>
 
+        {/* 登録カード */}
+        <Card className="rounded-3xl gap-0 py-0 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.10)]">
+          <div className="px-5 pt-4 pb-5">
+            <p className="text-[11px] font-medium text-muted-foreground/60 tracking-wide mb-3">
+              登録
+            </p>
+            <SavingsEntryForm today={today} />
+          </div>
+        </Card>
+
         {/* 履歴カード */}
         <Card className="rounded-3xl gap-0 py-0 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.10)]">
           <div className="px-5 pt-4 pb-3">
@@ -348,16 +358,6 @@ export default function SavingsPage() {
                 ))}
               </div>
             )}
-          </div>
-        </Card>
-
-        {/* 登録カード */}
-        <Card className="rounded-3xl gap-0 py-0 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.30_0.02_30_/_0.10)]">
-          <div className="px-5 pt-4 pb-5">
-            <p className="text-[11px] font-medium text-muted-foreground/60 tracking-wide mb-3">
-              登録
-            </p>
-            <SavingsEntryForm today={today} />
           </div>
         </Card>
       </section>
