@@ -382,7 +382,9 @@ function SavingsEntryForm({ today }: { today: string }) {
   const [entryType, setEntryType] = useState<"積立" | "配分">("積立");
   const [amount, setAmount] = useState("");
   const [memo, setMemo] = useState("");
-  const [date, setDate] = useState(today);
+  const [year, setYear] = useState(today.slice(0, 4));
+  const [month, setMonth] = useState(today.slice(5, 7));
+  const [day, setDay] = useState(today.slice(8, 10));
 
   const isSubmitting = fetcher.state !== "idle";
 
@@ -393,12 +395,18 @@ function SavingsEntryForm({ today }: { today: string }) {
     }
   }, [fetcher.state, fetcher.data]);
 
-  const isDirty = amount !== "";
+  const currentYear = parseInt(today.slice(0, 4));
+  const yearOptions = Array.from({ length: 4 }, (_, i) => currentYear - 2 + i);
+  const dateValue = `${year}-${month}-${day}`;
+
+  const selectClass =
+    "px-2 py-2 rounded-xl border border-input bg-background text-sm appearance-none text-center";
 
   return (
     <fetcher.Form method="post" className="space-y-3 pt-1">
       <input type="hidden" name="intent" value="addSavingsEntry" />
       <input type="hidden" name="type" value={entryType} />
+      <input type="hidden" name="date" value={dateValue} />
 
       {/* 種別トグル */}
       <div className="flex gap-2">
@@ -412,13 +420,9 @@ function SavingsEntryForm({ today }: { today: string }) {
               entryType === t
                 ? {
                     backgroundColor:
-                      t === "積立"
-                        ? "oklch(0.94 0.05 160)"
-                        : "oklch(0.94 0.05 25)",
+                      t === "積立" ? "oklch(0.94 0.05 160)" : "oklch(0.94 0.05 25)",
                     color:
-                      t === "積立"
-                        ? "oklch(0.45 0.14 160)"
-                        : "oklch(0.50 0.15 25)",
+                      t === "積立" ? "oklch(0.45 0.14 160)" : "oklch(0.50 0.15 25)",
                   }
                 : { backgroundColor: "oklch(0.95 0.005 60)", color: "oklch(0.55 0.02 30)" }
             }
@@ -456,26 +460,49 @@ function SavingsEntryForm({ today }: { today: string }) {
         placeholder="メモ（例: 精算返却）"
       />
 
-      {/* 日付 */}
-      <input
-        type="date"
-        name="date"
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
-        className="w-full px-3 py-2 rounded-xl border border-input bg-background text-sm"
-      />
-
-      {/* 保存ボタン（dirty-state-aware） */}
-      {isDirty && (
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full py-2.5 rounded-xl text-sm font-semibold transition-opacity disabled:opacity-60"
-          style={{ backgroundColor: "oklch(0.74 0.13 28)", color: "oklch(0.99 0.005 60)" }}
+      {/* 日付（年・月・日 セレクト） */}
+      <div className="flex items-center gap-1.5">
+        <select
+          value={year}
+          onChange={(e) => setYear(e.target.value)}
+          className={`${selectClass} w-[4.5rem]`}
         >
-          {isSubmitting ? "保存中..." : "保存する"}
-        </button>
-      )}
+          {yearOptions.map((y) => (
+            <option key={y} value={String(y)}>{y}</option>
+          ))}
+        </select>
+        <span className="text-sm text-muted-foreground">年</span>
+        <select
+          value={month}
+          onChange={(e) => setMonth(e.target.value)}
+          className={`${selectClass} w-12`}
+        >
+          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+            <option key={m} value={String(m).padStart(2, "0")}>{m}</option>
+          ))}
+        </select>
+        <span className="text-sm text-muted-foreground">月</span>
+        <select
+          value={day}
+          onChange={(e) => setDay(e.target.value)}
+          className={`${selectClass} w-12`}
+        >
+          {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+            <option key={d} value={String(d).padStart(2, "0")}>{d}</option>
+          ))}
+        </select>
+        <span className="text-sm text-muted-foreground">日</span>
+      </div>
+
+      {/* 登録ボタン */}
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className="w-full py-2.5 rounded-xl text-sm font-semibold transition-opacity disabled:opacity-60"
+        style={{ backgroundColor: "oklch(0.74 0.13 28)", color: "oklch(0.99 0.005 60)" }}
+      >
+        {isSubmitting ? "登録中..." : "登録"}
+      </button>
     </fetcher.Form>
   );
 }
