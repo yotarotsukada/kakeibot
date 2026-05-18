@@ -409,23 +409,21 @@ function EntryRow({
 
 function IncomeRow({ entry }: { entry: LedgerEntryWithId }) {
   return (
-    <div className="bg-background rounded-2xl px-4 py-3 flex items-start gap-3 border border-border/30 shadow-[0_1px_4px_-2px_oklch(0.30_0.02_30_/_0.08)]">
-      <div className="flex-1 min-w-0 space-y-1.5">
-        <div className="flex items-center gap-2">
-          <span
-            className="size-2 rounded-full shrink-0 mt-px"
-            style={{ backgroundColor: "oklch(0.72 0.10 165)" }}
-            aria-hidden
-          />
-          <span className="text-[13px] font-medium text-emerald-700">入金</span>
-        </div>
-        {entry.memo && (
-          <p className="text-[11px] text-muted-foreground/65 truncate pl-4">
-            {entry.memo}
-          </p>
-        )}
-      </div>
-      <span className="font-numeric tabular-nums font-bold text-base text-emerald-700 shrink-0 pt-0.5">
+    <div
+      className="rounded-2xl px-4 py-3 flex items-center gap-3"
+      style={{ backgroundColor: "oklch(0.95 0.04 165)" }}
+    >
+      {entry.memo ? (
+        <p className="flex-1 min-w-0 text-[11px] text-muted-foreground/70 truncate">
+          {entry.memo}
+        </p>
+      ) : (
+        <span className="flex-1" />
+      )}
+      <span
+        className="font-numeric tabular-nums font-bold text-base shrink-0"
+        style={{ color: "oklch(0.48 0.10 165)" }}
+      >
         +¥{entry.amount.toLocaleString()}
       </span>
     </div>
