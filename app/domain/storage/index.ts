@@ -4,8 +4,15 @@
  */
 
 import type { BudgetRecord, Wallet } from "~/domain/budget/budget";
-import type { IncomeEntry, LedgerEntry, SpendingEntry } from "~/domain/ledger/entry";
-import type { PoolOperation, PoolOperationWithId } from "~/domain/savings/pool-operation";
+import type {
+  IncomeEntry,
+  LedgerEntry,
+  SpendingEntry,
+} from "~/domain/ledger/entry";
+import type {
+  PoolOperation,
+  PoolOperationWithId,
+} from "~/domain/savings/pool-operation";
 
 export type { PoolOperation, PoolOperationWithId };
 
@@ -73,6 +80,16 @@ export interface Storage {
 
   /** 指定年月のすべてのエントリ（入金・支出）を返す。 */
   getLedgerEntriesByMonth(yearMonth: string): Promise<LedgerEntryWithId[]>;
+
+  /**
+   * 金額が完全一致し、かつ日付が [fromDate, toDate]（両端含む）に収まる支出エントリを返す。
+   * カード利用速報の照合に使う。日付は YYYY-MM-DD の辞書順比較で判定する。
+   */
+  findSpendingEntriesByAmountAndDateRange(
+    amount: number,
+    fromDate: string,
+    toDate: string,
+  ): Promise<SpendingEntryWithId[]>;
 
   /** 全期間・全財布のすべてのエントリ（入金・支出）を返す（推定残高計算用）。 */
   getAllLedgerEntries(): Promise<LedgerEntryWithId[]>;

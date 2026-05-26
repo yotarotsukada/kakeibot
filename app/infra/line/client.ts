@@ -54,4 +54,29 @@ export class GoogleLineClient implements LineClient {
       );
     }
   }
+
+  async push(to: string, message: string): Promise<void> {
+    // push は通知本体なので、失敗は呼び出し元で扱えるよう LineApiError を throw する
+    try {
+      const res = await fetch("https://api.line.me/v2/bot/message/push", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.accessToken}`,
+        },
+        body: JSON.stringify({
+          to,
+          messages: [{ type: "text", text: message }],
+        }),
+      });
+      if (!res.ok) {
+        throw new Error(`${res.status} ${res.statusText}`);
+      }
+    } catch (err) {
+      throw new LineApiError(
+        `メッセージの push に失敗しました (to: ${to})`,
+        err,
+      );
+    }
+  }
 }

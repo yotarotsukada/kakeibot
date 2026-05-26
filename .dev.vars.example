@@ -12,6 +12,12 @@ USE_MOCK_AUTH=true
 LINE_CHANNEL_SECRET=test-channel-secret
 LINE_CHANNEL_ACCESS_TOKEN=test-channel-access-token
 
+# ---- カード利用速報メール通知 ----
+# 通知先の LINE グループ ID（本番では bot を入れたグループの groupId を設定）
+LINE_NOTIFY_GROUP_ID=test-notify-group-id
+# /notify/card-email の共有ベアラトークン（GAS と Worker で同じ値を共有する）
+CARD_EMAIL_WEBHOOK_TOKEN=test-card-email-token
+
 # ---- LINE Login OAuth ----
 # 本番では LINE Developers の LINE Login チャンネルから取得した値を設定する
 LINE_LOGIN_CHANNEL_ID=your-line-login-channel-id

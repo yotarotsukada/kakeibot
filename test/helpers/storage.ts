@@ -24,7 +24,7 @@ type TestStorageInit = {
  * init で渡したデータのみを初期状態とする。
  */
 export function createTestStorage(init: TestStorageInit = {}): Storage {
-  let wallets: Wallet[] = structuredClone(init.wallets ?? []);
+  const wallets: Wallet[] = structuredClone(init.wallets ?? []);
   let budgets: BudgetRecord[] = structuredClone(init.budgets ?? []);
   const ledger: StoredEntry[] = structuredClone(init.ledger ?? []);
   const users = new Map(Object.entries(init.users ?? {}));
@@ -129,6 +129,22 @@ export function createTestStorage(init: TestStorageInit = {}): Storage {
 
     async getAllLedgerEntries(): Promise<LedgerEntryWithId[]> {
       return ledger.map(({ id, ...entry }) => ({ id, ...entry }));
+    },
+
+    async findSpendingEntriesByAmountAndDateRange(
+      amount: number,
+      fromDate: string,
+      toDate: string,
+    ): Promise<SpendingEntryWithId[]> {
+      return ledger
+        .filter(
+          (e): e is SpendingEntry & { id: string } =>
+            e.type === "支出" &&
+            e.amount === amount &&
+            e.date >= fromDate &&
+            e.date <= toDate,
+        )
+        .map(({ id, ...entry }) => ({ id, ...entry }));
     },
 
     async updateLedgerEntryCategory(entryId: string, categoryName: string) {

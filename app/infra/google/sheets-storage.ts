@@ -450,7 +450,9 @@ export class GoogleSheetsStorage implements Storage {
       const data = (await res.json()) as { values?: string[][] };
       if (!data.values || data.values.length <= 1) return null;
       // row[1]=type, row[5]=wallet; 支出かつ財布が設定されているもの
-      const rows = data.values.slice(1).filter((row) => row[0] && row[1] === "支出" && row[5]);
+      const rows = data.values
+        .slice(1)
+        .filter((row) => row[0] && row[1] === "支出" && row[5]);
       if (rows.length === 0) return null;
       const latest = rows.reduce((prev, cur) =>
         cur[0] > prev[0] ? cur : prev,
@@ -477,17 +479,19 @@ export class GoogleSheetsStorage implements Storage {
       return data.values
         .slice(1)
         .filter((row) => row[6] === walletName)
-        .map((row): SpendingEntryWithId => ({
-          id: row[0],
-          date: row[1],
-          type: "支出",
-          amount: Number(row[3]) || 0,
-          actor: row[4],
-          category: row[5],
-          wallet: row[6],
-          shouldSettle: row[7] === "TRUE",
-          memo: row[8] ?? "",
-        }));
+        .map(
+          (row): SpendingEntryWithId => ({
+            id: row[0],
+            date: row[1],
+            type: "支出",
+            amount: Number(row[3]) || 0,
+            actor: row[4],
+            category: row[5],
+            wallet: row[6],
+            shouldSettle: row[7] === "TRUE",
+            memo: row[8] ?? "",
+          }),
+        );
     } catch (err) {
       throw new GoogleSheetsError("元帳の取得に失敗しました", err);
     }
@@ -568,9 +572,43 @@ export class GoogleSheetsStorage implements Storage {
       if (!res.ok) return [];
       const data = (await res.json()) as { values?: string[][] };
       if (!data.values) return [];
-      return data.values.slice(1).filter((row) => row[0]).map(rowToLedgerEntryWithId);
+      return data.values
+        .slice(1)
+        .filter((row) => row[0])
+        .map(rowToLedgerEntryWithId);
     } catch (err) {
       throw new GoogleSheetsError("元帳の取得に失敗しました", err);
+    }
+  }
+
+  async findSpendingEntriesByAmountAndDateRange(
+    amount: number,
+    fromDate: string,
+    toDate: string,
+  ): Promise<SpendingEntryWithId[]> {
+    try {
+      const token = await this.getAccessToken();
+      const range = `${SHEET_NAMES.LEDGER}!A:I`;
+      const url = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(range)}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return [];
+      const data = (await res.json()) as { values?: string[][] };
+      if (!data.values) return [];
+      return data.values
+        .slice(1)
+        .filter(
+          (row) =>
+            row[2] === "支出" &&
+            Number(row[3]) === amount &&
+            row[1] >= fromDate &&
+            row[1] <= toDate,
+        )
+        .map(rowToLedgerEntryWithId)
+        .filter((e): e is SpendingEntryWithId => e.type === "支出");
+    } catch (err) {
+      throw new GoogleSheetsError("元帳の照合に失敗しました", err);
     }
   }
 
@@ -623,14 +661,14 @@ export class GoogleSheetsStorage implements Storage {
         );
     } catch (err) {
       if (err instanceof GoogleSheetsError) throw err;
-      throw new GoogleSheetsError("アトリビューションの更新に失敗しました", err);
+      throw new GoogleSheetsError(
+        "アトリビューションの更新に失敗しました",
+        err,
+      );
     }
   }
 
-  async updateLedgerEntryActor(
-    entryId: string,
-    actor: string,
-  ): Promise<void> {
+  async updateLedgerEntryActor(entryId: string, actor: string): Promise<void> {
     try {
       const token = await this.getAccessToken();
       const idsRange = `${SHEET_NAMES.LEDGER}!A:A`;
@@ -717,7 +755,9 @@ export class GoogleSheetsStorage implements Storage {
       const token = await this.getAccessToken();
       const range = `${SHEET_NAMES.SAVINGS_OPS}!A:A`;
       const readUrl = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(range)}`;
-      const readRes = await fetch(readUrl, { headers: { Authorization: `Bearer ${token}` } });
+      const readRes = await fetch(readUrl, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!readRes.ok) throw new Error(`Sheets read failed: ${readRes.status}`);
       const data = (await readRes.json()) as { values?: string[][] };
       const rows = data.values ?? [];
@@ -725,23 +765,46 @@ export class GoogleSheetsStorage implements Storage {
       if (rowIdx === -1) return;
 
       const metaUrl = `${SHEETS_BASE}/${this.spreadsheetId}?fields=sheets.properties`;
-      const metaRes = await fetch(metaUrl, { headers: { Authorization: `Bearer ${token}` } });
-      if (!metaRes.ok) throw new Error(`Sheets metadata failed: ${metaRes.status}`);
+      const metaRes = await fetch(metaUrl, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!metaRes.ok)
+        throw new Error(`Sheets metadata failed: ${metaRes.status}`);
       const meta = (await metaRes.json()) as {
         sheets: { properties: { sheetId: number; title: string } }[];
       };
-      const sheet = meta.sheets.find((s) => s.properties.title === SHEET_NAMES.SAVINGS_OPS);
-      if (!sheet) throw new Error(`シート "${SHEET_NAMES.SAVINGS_OPS}" が見つかりません`);
+      const sheet = meta.sheets.find(
+        (s) => s.properties.title === SHEET_NAMES.SAVINGS_OPS,
+      );
+      if (!sheet)
+        throw new Error(`シート "${SHEET_NAMES.SAVINGS_OPS}" が見つかりません`);
 
       const batchUrl = `${SHEETS_BASE}/${this.spreadsheetId}:batchUpdate`;
       const batchRes = await fetch(batchUrl, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          requests: [{ deleteDimension: { range: { sheetId: sheet.properties.sheetId, dimension: "ROWS", startIndex: rowIdx, endIndex: rowIdx + 1 } } }],
+          requests: [
+            {
+              deleteDimension: {
+                range: {
+                  sheetId: sheet.properties.sheetId,
+                  dimension: "ROWS",
+                  startIndex: rowIdx,
+                  endIndex: rowIdx + 1,
+                },
+              },
+            },
+          ],
         }),
       });
-      if (!batchRes.ok) throw new Error(`Sheets delete failed: ${batchRes.status} ${await batchRes.text()}`);
+      if (!batchRes.ok)
+        throw new Error(
+          `Sheets delete failed: ${batchRes.status} ${await batchRes.text()}`,
+        );
     } catch (err) {
       if (err instanceof GoogleSheetsError) throw err;
       throw new GoogleSheetsError("貯金操作の削除に失敗しました", err);
@@ -770,7 +833,9 @@ export class GoogleSheetsStorage implements Storage {
         body: JSON.stringify({ range, majorDimension: "ROWS", values: rows }),
       });
       if (!res.ok) {
-        throw new Error(`Sheets append failed: ${res.status} ${await res.text()}`);
+        throw new Error(
+          `Sheets append failed: ${res.status} ${await res.text()}`,
+        );
       }
     } catch (err) {
       if (err instanceof GoogleSheetsError) throw err;
@@ -783,7 +848,9 @@ export class GoogleSheetsStorage implements Storage {
       const token = await this.getAccessToken();
       const range = `${SHEET_NAMES.SAVINGS_OPS}!A:F`;
       const url = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(range)}`;
-      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) return [];
       const data = (await res.json()) as { values?: string[][] };
       if (!data.values) return [];
