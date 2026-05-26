@@ -73,11 +73,14 @@ export async function action({ request, context }: Route.ActionArgs) {
       lineClient: createLineClient(env),
       notifyGroupId: env.LINE_NOTIFY_GROUP_ID,
     }).then((result) => {
+      // gmailMessageId を併記し、どのメール由来の結果かを追えるようにする
+      // （解析失敗・通知抑制は静かに起こるため、追跡の手掛かりを残す）
+      const ref = `gmailMessageId=${input.gmailMessageId ?? "-"}`;
       if (result.ok) {
-        console.log(`[CardEmail] ✅ outcome=${result.value}`);
+        console.log(`[CardEmail] ✅ outcome=${result.value} (${ref})`);
       } else {
         console.error(
-          `[CardEmail] ${result.error.name}: ${result.error.message}`,
+          `[CardEmail] ${result.error.name}: ${result.error.message} (${ref})`,
         );
       }
     }),
