@@ -17,8 +17,10 @@
 const WORKER_ENDPOINT =
   "https://kakeibot.yotarotsukada.workers.dev/notify/card-email";
 const WEBHOOK_TOKEN = "REPLACE_WITH_CARD_EMAIL_WEBHOOK_TOKEN";
+// 件名条件は RakutenCardEmailParser.canParse の受理パターンに揃える。
+// （パーサは扱えるのに GAS が転送しない件名、を作らないため）
 const GMAIL_QUERY =
-  'from:rakuten-card.co.jp subject:カード利用のお知らせ newer_than:7d';
+  "from:rakuten-card.co.jp subject:(カード利用 OR ご利用のお知らせ OR ご利用内容) newer_than:7d";
 
 // 転送済みメッセージ ID を記録するキーと保持期間（クエリ窓より長く取る）。
 const PROCESSED_PROP_KEY = "kakeibot_forwarded_ids";
