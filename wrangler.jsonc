@@ -38,7 +38,9 @@
         "LINE_CHANNEL_ACCESS_TOKEN": "preview-mock",
         "LINE_LOGIN_CHANNEL_ID": "preview-mock",
         "LINE_LOGIN_CHANNEL_SECRET": "preview-mock",
-        "GEMINI_API_KEY": "preview-mock"
+        "GEMINI_API_KEY": "preview-mock",
+        "LINE_NOTIFY_GROUP_ID": "preview-mock",
+        "CARD_EMAIL_WEBHOOK_TOKEN": "preview-mock"
       }
     }
   }

@@ -251,16 +251,52 @@ const SEED_LEDGER: StoredEntry[] = [
 ];
 
 const SEED_POOL_OPERATIONS: (PoolOperation & { transactionId: string })[] = [
-  { transactionId: "seed-pool-001", date: "2026-01-01", type: "積立", amount: 500000, actor: "共同", memo: "初期残高" },
-  { transactionId: "seed-pool-002", date: "2026-03-01", type: "積立", amount: 30000, actor: "共同", memo: "3月分積立" },
-  { transactionId: "seed-pool-003", date: "2026-04-01", type: "積立", amount: 30000, actor: "共同", memo: "4月分積立" },
-  { transactionId: "seed-pool-004", date: "2026-05-01", type: "積立", amount: 30000, actor: "共同", memo: "5月分積立" },
-  { transactionId: "seed-pool-005", date: "2026-04-30", type: "配分", amount: 200000, actor: "共同", memo: "沖縄旅行費用配分" },
+  {
+    transactionId: "seed-pool-001",
+    date: "2026-01-01",
+    type: "積立",
+    amount: 500000,
+    actor: "共同",
+    memo: "初期残高",
+  },
+  {
+    transactionId: "seed-pool-002",
+    date: "2026-03-01",
+    type: "積立",
+    amount: 30000,
+    actor: "共同",
+    memo: "3月分積立",
+  },
+  {
+    transactionId: "seed-pool-003",
+    date: "2026-04-01",
+    type: "積立",
+    amount: 30000,
+    actor: "共同",
+    memo: "4月分積立",
+  },
+  {
+    transactionId: "seed-pool-004",
+    date: "2026-05-01",
+    type: "積立",
+    amount: 30000,
+    actor: "共同",
+    memo: "5月分積立",
+  },
+  {
+    transactionId: "seed-pool-005",
+    date: "2026-04-30",
+    type: "配分",
+    amount: 200000,
+    actor: "共同",
+    memo: "沖縄旅行費用配分",
+  },
 ];
 
 export class MockStorage implements Storage {
   private ledger: StoredEntry[] = structuredClone(SEED_LEDGER);
-  private poolOps: (PoolOperation & { transactionId: string })[] = structuredClone(SEED_POOL_OPERATIONS);
+  private poolOps: (PoolOperation & { transactionId: string })[] =
+    structuredClone(SEED_POOL_OPERATIONS);
   private users = new Map<string, string>([
     ["U_MOCK_USER_A", "A"],
     ["U_MOCK_USER_B", "B"],
@@ -371,8 +407,9 @@ export class MockStorage implements Storage {
     walletName: string,
   ): Promise<SpendingEntryWithId[]> {
     return this.ledger
-      .filter((e): e is SpendingEntry & { transactionId: string } =>
-        e.type === "支出" && e.wallet === walletName,
+      .filter(
+        (e): e is SpendingEntry & { transactionId: string } =>
+          e.type === "支出" && e.wallet === walletName,
       )
       .map(({ transactionId, ...entry }) => ({ id: transactionId, ...entry }));
   }
@@ -390,6 +427,22 @@ export class MockStorage implements Storage {
       id: transactionId,
       ...entry,
     }));
+  }
+
+  async findSpendingEntriesByAmountAndDateRange(
+    amount: number,
+    fromDate: string,
+    toDate: string,
+  ): Promise<SpendingEntryWithId[]> {
+    return this.ledger
+      .filter(
+        (e): e is SpendingEntry & { transactionId: string } =>
+          e.type === "支出" &&
+          e.amount === amount &&
+          e.date >= fromDate &&
+          e.date <= toDate,
+      )
+      .map(({ transactionId, ...entry }) => ({ id: transactionId, ...entry }));
   }
 
   async updateLedgerEntryCategory(
@@ -420,16 +473,11 @@ export class MockStorage implements Storage {
     }
   }
 
-  async updateLedgerEntryActor(
-    entryId: string,
-    actor: string,
-  ): Promise<void> {
+  async updateLedgerEntryActor(entryId: string, actor: string): Promise<void> {
     const entry = this.ledger.find((e) => e.transactionId === entryId);
     if (entry) {
       entry.actor = actor;
-      console.log(
-        `[MockStorage] ✏️  アクター更新: ${entryId} → actor=${actor}`,
-      );
+      console.log(`[MockStorage] ✏️  アクター更新: ${entryId} → actor=${actor}`);
     }
   }
 
@@ -473,6 +521,9 @@ export class MockStorage implements Storage {
   }
 
   async getAllPoolOperations(): Promise<PoolOperationWithId[]> {
-    return this.poolOps.map(({ transactionId, ...op }) => ({ id: transactionId, ...op }));
+    return this.poolOps.map(({ transactionId, ...op }) => ({
+      id: transactionId,
+      ...op,
+    }));
   }
 }

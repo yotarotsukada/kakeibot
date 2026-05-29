@@ -28,4 +28,8 @@ export class MockLineClient implements LineClient {
       `[MockLineClient] 💬 reply (token: ${replyToken.slice(0, 12)}...):\n${message}`,
     );
   }
+
+  async push(to: string, message: string): Promise<void> {
+    console.log(`[MockLineClient] 📣 push (to: ${to}):\n${message}`);
+  }
 }

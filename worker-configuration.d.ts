@@ -12,6 +12,12 @@ interface Env {
   LINE_CHANNEL_SECRET: string;
   LINE_CHANNEL_ACCESS_TOKEN: string;
 
+  // ---- カード利用速報メール通知 ----
+  // 通知先の LINE グループ ID（secret）
+  LINE_NOTIFY_GROUP_ID: string;
+  // /notify/card-email の共有ベアラトークン（secret）
+  CARD_EMAIL_WEBHOOK_TOKEN: string;
+
   // ---- LINE Login OAuth ----
   LINE_LOGIN_CHANNEL_ID: string;
   LINE_LOGIN_CHANNEL_SECRET: string;

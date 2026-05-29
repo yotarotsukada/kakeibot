@@ -25,3 +25,17 @@ export function buildMonthRange(
 export function isValidMonth(month: string, range: string[]): boolean {
   return /^\d{4}-\d{2}$/.test(month) && range.includes(month);
 }
+
+/**
+ * YYYY-MM-DD の日付文字列に days 日を加減算して YYYY-MM-DD で返す。
+ * UTC 基準で計算しタイムゾーンによるドリフトを避ける。
+ */
+export function addDaysToDateString(date: string, days: number): string {
+  const [y, m, d] = date.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  const yy = dt.getUTCFullYear();
+  const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getUTCDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}

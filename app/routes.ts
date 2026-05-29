@@ -9,4 +9,5 @@ export default [
   route("special-wallets", "routes/special-wallets.tsx"),
   route("savings", "routes/savings.tsx"),
   route("webhook", "routes/webhook.ts"),
+  route("notify/card-email", "routes/notify.card-email.ts"),
 ] satisfies RouteConfig;
