@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useFetcher, useLoaderData } from "react-router";
+import {
+  spendingLensKey,
+  UNCATEGORIZED_KEY,
+} from "~/components/features/calendar/lens";
 import { MonthCalendar } from "~/components/features/calendar/MonthCalendar";
 import { getCategoryColor } from "~/components/features/wallet/categoryColors";
 import { MonthSelector } from "~/components/features/wallet/MonthSelector";
@@ -9,7 +13,11 @@ import {
   ValidationError,
   wrapUnknownError,
 } from "~/domain/errors";
-import type { IncomeEntryWithId, LedgerEntryWithId, SpendingEntryWithId } from "~/domain/storage";
+import type {
+  IncomeEntryWithId,
+  LedgerEntryWithId,
+  SpendingEntryWithId,
+} from "~/domain/storage";
 import { createStorage } from "~/infra/factory";
 import {
   type ActionError,
@@ -18,14 +26,15 @@ import {
 } from "~/lib/action-result";
 import { requireAuth } from "~/lib/auth";
 import { buildMonthRange, getCurrentMonthJST, isValidMonth } from "~/lib/date";
+import { cn } from "~/lib/utils";
 import type { Route } from "./+types/calendar";
 
 // ---- 入金表示用カラー --------------------------------------------------------
 
-const COLOR_INCOME_BG     = "oklch(0.93 0.02 165)";  // 入金カード背景（落ち着いた薄緑）
-const COLOR_INCOME_DOT    = "oklch(0.68 0.09 165)";  // 入金ドット
-const COLOR_INCOME_AMOUNT = "oklch(0.48 0.10 165)";  // 入金カード内の金額テキスト
-const COLOR_INCOME_TOTAL  = "oklch(0.55 0.10 165)";  // 日別パネルの入金合計テキスト
+const COLOR_INCOME_BG = "oklch(0.93 0.02 165)"; // 入金カード背景（落ち着いた薄緑）
+const COLOR_INCOME_DOT = "oklch(0.68 0.09 165)"; // 入金ドット
+const COLOR_INCOME_AMOUNT = "oklch(0.48 0.10 165)"; // 入金カード内の金額テキスト
+const COLOR_INCOME_TOTAL = "oklch(0.55 0.10 165)"; // 日別パネルの入金合計テキスト
 
 export function meta(_args: Route.MetaArgs) {
   return [{ title: "ふたりの家計簿 | カレンダー" }];
@@ -98,7 +107,11 @@ export async function action({
     const walletName = String(formData.get("walletName") ?? "");
     const categoryName = String(formData.get("categoryName") ?? "");
     try {
-      await storage.updateLedgerEntryAttribution(entryId, walletName, categoryName);
+      await storage.updateLedgerEntryAttribution(
+        entryId,
+        walletName,
+        categoryName,
+      );
       return null;
     } catch (e) {
       const wrapped = e instanceof GoogleSheetsError ? e : wrapUnknownError(e);
@@ -162,9 +175,46 @@ function decodeAttribution(
   return { walletName: monthlyWalletName, categoryName: name };
 }
 
-// ---- カテゴリ選択行 --------------------------------------------------------
+// ---- カテゴリ絞り込みチップ ------------------------------------------------
 
 const UNCATEGORIZED_COLOR = "oklch(0.72 0 0)";
+
+function FilterChip({
+  label,
+  color,
+  active,
+  onClick,
+}: {
+  label: string;
+  color?: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-sm px-2.5 py-1 text-xs font-medium transition-colors active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+        active
+          ? "bg-primary text-primary-foreground"
+          : "bg-muted text-foreground/70 hover:bg-muted/70",
+      )}
+    >
+      {color && (
+        <span
+          className="size-2 rounded-full shrink-0"
+          style={{ backgroundColor: active ? "currentColor" : color }}
+          aria-hidden
+        />
+      )}
+      {label}
+    </button>
+  );
+}
+
+// ---- カテゴリ選択行 --------------------------------------------------------
 
 function EntryRow({
   entry,
@@ -190,7 +240,12 @@ function EntryRow({
   useActionErrorToast(actionData);
   useActionErrorToast(actorActionData);
 
-  const currentAttribution = encodeAttribution(entry, monthlyWalletName, specialWalletNames, categories);
+  const currentAttribution = encodeAttribution(
+    entry,
+    monthlyWalletName,
+    specialWalletNames,
+    categories,
+  );
   const optimisticAttribution = useMemo(() => {
     const fd = fetcher.formData;
     if (!fd) return currentAttribution;
@@ -322,7 +377,9 @@ function EntryRow({
                   ? "shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 active:bg-amber-200 transition-colors disabled:opacity-50"
                   : "shrink-0 text-[10px] px-1.5 py-0.5 rounded-full text-muted-foreground/40 border border-border/30 hover:text-muted-foreground/70 hover:border-border/60 transition-colors disabled:opacity-30"
               }
-              aria-label={actorLabel ? `${actorLabel}（タップで変更）` : "立替を設定"}
+              aria-label={
+                actorLabel ? `${actorLabel}（タップで変更）` : "立替を設定"
+              }
             >
               {actorLabel ?? "共同"}
             </button>
@@ -354,7 +411,9 @@ function EntryRow({
           <div
             className="relative w-full max-w-md rounded-t-3xl bg-card border-t border-x border-border/50 shadow-[0_-8px_40px_-4px_oklch(0.30_0.02_30_/_0.20)] overflow-hidden transition-transform duration-[250ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
             style={{
-              transform: actorModalVisible ? "translateY(0)" : "translateY(100%)",
+              transform: actorModalVisible
+                ? "translateY(0)"
+                : "translateY(100%)",
             }}
           >
             {/* ドラッグハンドル */}
@@ -370,7 +429,8 @@ function EntryRow({
             {/* 選択肢 */}
             <div className="px-3 pb-4">
               {(["共同", ...userNames] as string[]).map((name) => {
-                const label = name === "共同" ? "共同（立替なし）" : `${name}立替`;
+                const label =
+                  name === "共同" ? "共同（立替なし）" : `${name}立替`;
                 const isSelected = optimisticActor === name;
                 return (
                   <button
@@ -389,7 +449,9 @@ function EntryRow({
                       {label}
                     </span>
                     {isSelected && (
-                      <span className="text-primary font-bold text-base">✓</span>
+                      <span className="text-primary font-bold text-base">
+                        ✓
+                      </span>
                     )}
                   </button>
                 );
@@ -460,6 +522,7 @@ function DayDetailPanel({
   unsettledSpecialWallets,
   monthlyWalletName,
   userNames,
+  activeFilter,
   onClose,
 }: {
   date: string;
@@ -469,6 +532,7 @@ function DayDetailPanel({
   unsettledSpecialWallets: string[];
   monthlyWalletName: string;
   userNames: string[];
+  activeFilter: string | null;
   onClose: () => void;
 }) {
   const [visible, setVisible] = useState(false);
@@ -486,11 +550,20 @@ function DayDetailPanel({
 
   const [, m, d] = date.split("-");
   const label = `${Number(m)}月${Number(d)}日`;
+  // レンズ適用中はヘッダ合計もカレンダーセルと揃え、該当カテゴリのみ集計する。
+  const matchesFilter = (entry: LedgerEntryWithId) =>
+    activeFilter === null ||
+    spendingLensKey(
+      entry,
+      monthlyWalletName,
+      specialWalletNames,
+      categories,
+    ) === activeFilter;
   const totalSpending = entries
-    .filter((e) => e.type === "支出")
+    .filter((e) => e.type === "支出" && matchesFilter(e))
     .reduce((s, e) => s + e.amount, 0);
   const totalIncome = entries
-    .filter((e) => e.type === "入金")
+    .filter((e) => e.type === "入金" && matchesFilter(e))
     .reduce((s, e) => s + e.amount, 0);
 
   return (
@@ -516,7 +589,9 @@ function DayDetailPanel({
               <div className="flex items-center gap-3 mt-0.5">
                 {totalSpending > 0 && (
                   <div className="flex items-baseline gap-1">
-                    <span className="text-[11px] text-muted-foreground">支出</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      支出
+                    </span>
                     <span className="font-numeric tabular-nums font-bold text-base text-primary">
                       ¥{totalSpending.toLocaleString()}
                     </span>
@@ -524,8 +599,13 @@ function DayDetailPanel({
                 )}
                 {totalIncome > 0 && (
                   <div className="flex items-baseline gap-1">
-                    <span className="text-[11px] text-muted-foreground">入金</span>
-                    <span className="font-numeric tabular-nums font-bold text-base" style={{ color: COLOR_INCOME_TOTAL }}>
+                    <span className="text-[11px] text-muted-foreground">
+                      入金
+                    </span>
+                    <span
+                      className="font-numeric tabular-nums font-bold text-base"
+                      style={{ color: COLOR_INCOME_TOTAL }}
+                    >
                       +¥{totalIncome.toLocaleString()}
                     </span>
                   </div>
@@ -550,22 +630,29 @@ function DayDetailPanel({
               この日の記録はありません
             </p>
           ) : (
-            entries.map((entry) =>
-              entry.type === "入金" ? (
-                <IncomeRow key={entry.id} entry={entry} />
-              ) : (
-                <EntryRow
-                  key={entry.id}
-                  entry={entry}
-                  categories={categories}
-                  colorMap={colorMap}
-                  specialWalletNames={specialWalletNames}
-                  unsettledSpecialWallets={unsettledSpecialWallets}
-                  monthlyWalletName={monthlyWalletName}
-                  userNames={userNames}
-                />
-              ),
-            )
+            entries.map((entry) => (
+              <div
+                key={entry.id}
+                className={cn(
+                  "transition-opacity",
+                  !matchesFilter(entry) && "opacity-35",
+                )}
+              >
+                {entry.type === "入金" ? (
+                  <IncomeRow entry={entry} />
+                ) : (
+                  <EntryRow
+                    entry={entry}
+                    categories={categories}
+                    colorMap={colorMap}
+                    specialWalletNames={specialWalletNames}
+                    unsettledSpecialWallets={unsettledSpecialWallets}
+                    monthlyWalletName={monthlyWalletName}
+                    userNames={userNames}
+                  />
+                )}
+              </div>
+            ))
           )}
         </div>
       </div>
@@ -588,6 +675,8 @@ export default function CalendarPage() {
   } = useLoaderData<typeof loader>();
 
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  // カテゴリレンズ。null = すべて表示 / カテゴリ名 / UNCATEGORIZED_KEY（未分類）。
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
   const idx = monthRange.indexOf(selectedMonth);
   const prevMonth = idx > 0 ? monthRange[idx - 1] : null;
@@ -596,19 +685,64 @@ export default function CalendarPage() {
 
   const [year, month] = selectedMonth.split("-").map(Number);
 
-  // 日別支出合計マップ
+  // その月に実際に使われたカテゴリ（予算順）＋ 未分類。チップとして提示する。
+  const filterChips = useMemo(() => {
+    const present = new Set<string>();
+    for (const e of entries) {
+      const key = spendingLensKey(
+        e,
+        monthlyWalletName,
+        specialWalletNames,
+        categories,
+      );
+      if (key !== null) present.add(key);
+    }
+    const chips: { key: string; label: string; color: string }[] = [];
+    categories.forEach((cat, i) => {
+      if (present.has(cat)) {
+        chips.push({ key: cat, label: cat, color: getCategoryColor(i) });
+      }
+    });
+    if (present.has(UNCATEGORIZED_KEY)) {
+      chips.push({
+        key: UNCATEGORIZED_KEY,
+        label: "未分類",
+        color: UNCATEGORIZED_COLOR,
+      });
+    }
+    return chips;
+  }, [entries, categories, monthlyWalletName, specialWalletNames]);
+
+  // 日別支出合計マップ（レンズ適用時は該当カテゴリのみ集計）
   const dailyTotals = useMemo(() => {
     const map: Record<string, number> = {};
     for (const e of entries) {
-      if (e.type === "支出") {
-        map[e.date] = (map[e.date] ?? 0) + e.amount;
+      if (e.type !== "支出") continue;
+      if (
+        activeFilter !== null &&
+        spendingLensKey(
+          e,
+          monthlyWalletName,
+          specialWalletNames,
+          categories,
+        ) !== activeFilter
+      ) {
+        continue;
       }
+      map[e.date] = (map[e.date] ?? 0) + e.amount;
     }
     return map;
-  }, [entries]);
+  }, [
+    entries,
+    activeFilter,
+    monthlyWalletName,
+    specialWalletNames,
+    categories,
+  ]);
 
-  // 日別入金合計マップ
+  // 日別入金合計マップ。入金はカテゴリを持たないため、レンズ適用時は表示しない。
   const dailyIncomes = useMemo(() => {
+    if (activeFilter !== null) return {};
     const map: Record<string, number> = {};
     for (const e of entries) {
       if (e.type === "入金") {
@@ -616,12 +750,13 @@ export default function CalendarPage() {
       }
     }
     return map;
-  }, [entries]);
+  }, [entries, activeFilter]);
 
-  // 月ナビゲーション時のみパネルを閉じる。
+  // 月ナビゲーション時はパネルを閉じ、レンズも解除する。
   // biome-ignore lint/correctness/useExhaustiveDependencies: selectedMonth が変化したときだけ実行したい（effect 内部では参照しないが trigger として使用）
   useEffect(() => {
     setSelectedDate(null);
+    setActiveFilter(null);
   }, [selectedMonth]);
 
   const selectedEntries = useMemo(
@@ -642,6 +777,28 @@ export default function CalendarPage() {
         basePath="/calendar"
       />
 
+      {/* カテゴリレンズ: その月に使われたカテゴリで絞り込む */}
+      {filterChips.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          <FilterChip
+            label="すべて"
+            active={activeFilter === null}
+            onClick={() => setActiveFilter(null)}
+          />
+          {filterChips.map((chip) => (
+            <FilterChip
+              key={chip.key || "__misc__"}
+              label={chip.label}
+              color={chip.color}
+              active={activeFilter === chip.key}
+              onClick={() =>
+                setActiveFilter((prev) => (prev === chip.key ? null : chip.key))
+              }
+            />
+          ))}
+        </div>
+      )}
+
       {/*
         横方向は -mx-5 で PageLayout の padding を打ち消して全幅表示。
         上下のみ薄いボーダーで区切る。
@@ -654,6 +811,7 @@ export default function CalendarPage() {
           dailyIncomes={dailyIncomes}
           selectedDate={selectedDate}
           onDateSelect={handleDateSelect}
+          filterActive={activeFilter !== null}
         />
       </div>
 
@@ -667,6 +825,7 @@ export default function CalendarPage() {
           unsettledSpecialWallets={unsettledSpecialWallets}
           monthlyWalletName={monthlyWalletName}
           userNames={userNames}
+          activeFilter={activeFilter}
           onClose={() => setSelectedDate(null)}
         />
       )}
