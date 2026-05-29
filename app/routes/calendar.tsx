@@ -1,4 +1,5 @@
 import { Suspense, use, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useFetcher, useLoaderData } from "react-router";
 import {
   spendingLensKey,
@@ -540,78 +541,80 @@ function EntryRow({
         </span>
       </div>
 
-      {/* アクター選択モーダル */}
-      {actorModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center">
-          {/* バックドロップ */}
-          <div
-            className="absolute inset-0 bg-black/50 transition-opacity duration-200"
-            style={{ opacity: actorModalVisible ? 1 : 0 }}
-            onClick={closeActorModal}
-          />
-          {/* ボトムシート */}
-          <div
-            className="relative w-full max-w-md rounded-t-3xl bg-card border-t border-x border-border/50 shadow-[0_-8px_40px_-4px_oklch(0.30_0.02_30_/_0.20)] overflow-hidden transition-transform duration-[250ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-            style={{
-              transform: actorModalVisible
-                ? "translateY(0)"
-                : "translateY(100%)",
-            }}
-          >
-            {/* ドラッグハンドル */}
-            <div className="flex justify-center pt-3 pb-2">
-              <div className="w-10 h-1 rounded-full bg-border/80" />
-            </div>
+      {/* アクター選択モーダル（opacity の stacking context 外に portal で描画） */}
+      {actorModalOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-end justify-center">
+            {/* バックドロップ */}
+            <div
+              className="absolute inset-0 bg-black/50 transition-opacity duration-200"
+              style={{ opacity: actorModalVisible ? 1 : 0 }}
+              onClick={closeActorModal}
+            />
+            {/* ボトムシート */}
+            <div
+              className="relative w-full max-w-md rounded-t-3xl bg-card border-t border-x border-border/50 shadow-[0_-8px_40px_-4px_oklch(0.30_0.02_30_/_0.20)] overflow-hidden transition-transform duration-[250ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+              style={{
+                transform: actorModalVisible
+                  ? "translateY(0)"
+                  : "translateY(100%)",
+              }}
+            >
+              {/* ドラッグハンドル */}
+              <div className="flex justify-center pt-3 pb-2">
+                <div className="w-10 h-1 rounded-full bg-border/80" />
+              </div>
 
-            {/* タイトル */}
-            <p className="text-center text-[13px] font-semibold text-muted-foreground pb-1">
-              立替を設定
-            </p>
+              {/* タイトル */}
+              <p className="text-center text-[13px] font-semibold text-muted-foreground pb-1">
+                立替を設定
+              </p>
 
-            {/* 選択肢 */}
-            <div className="px-3 pb-4">
-              {(["共同", ...userNames] as string[]).map((name) => {
-                const label =
-                  name === "共同" ? "共同（立替なし）" : `${name}立替`;
-                const isSelected = optimisticActor === name;
-                return (
-                  <button
-                    key={name}
-                    type="button"
-                    onClick={() => handleSelectActor(name)}
-                    className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl hover:bg-muted/60 active:bg-muted transition-colors"
-                  >
-                    <span
-                      className={
-                        isSelected
-                          ? "text-[15px] font-bold text-primary"
-                          : "text-[15px] text-foreground"
-                      }
+              {/* 選択肢 */}
+              <div className="px-3 pb-4">
+                {(["共同", ...userNames] as string[]).map((name) => {
+                  const label =
+                    name === "共同" ? "共同（立替なし）" : `${name}立替`;
+                  const isSelected = optimisticActor === name;
+                  return (
+                    <button
+                      key={name}
+                      type="button"
+                      onClick={() => handleSelectActor(name)}
+                      className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl hover:bg-muted/60 active:bg-muted transition-colors"
                     >
-                      {label}
-                    </span>
-                    {isSelected && (
-                      <span className="text-primary font-bold text-base">
-                        ✓
+                      <span
+                        className={
+                          isSelected
+                            ? "text-[15px] font-bold text-primary"
+                            : "text-[15px] text-foreground"
+                        }
+                      >
+                        {label}
                       </span>
-                    )}
-                  </button>
-                );
-              })}
+                      {isSelected && (
+                        <span className="text-primary font-bold text-base">
+                          ✓
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
 
-              <div className="mt-1 border-t border-border/30 pt-1">
-                <button
-                  type="button"
-                  onClick={closeActorModal}
-                  className="w-full py-3 text-[14px] text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  キャンセル
-                </button>
+                <div className="mt-1 border-t border-border/30 pt-1">
+                  <button
+                    type="button"
+                    onClick={closeActorModal}
+                    className="w-full py-3 text-[14px] text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    キャンセル
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </>
   );
 }
