@@ -288,6 +288,74 @@ function FilterChipsRow({
   );
 }
 
+/**
+ * カテゴリレンズ適用中のカレンダーグリッド。
+ * deferred データ（categories / specialWalletNames）が揃ってから、
+ * 選択カテゴリに一致する支出のみで日別合計を組み直して描画する。
+ * 入金は spendingLensKey が null を返すためカテゴリ絞り込み時は集計対象外になり、
+ * 日別パネルのヘッダ合計（matchesFilter）と集合が揃う。
+ */
+function FilteredMonthCalendar({
+  detailDataPromise,
+  entries,
+  monthlyWalletName,
+  activeFilter,
+  year,
+  month,
+  selectedDate,
+  onDateSelect,
+}: {
+  detailDataPromise: Promise<CalendarDetailData>;
+  entries: LedgerEntryWithId[];
+  monthlyWalletName: string;
+  activeFilter: string;
+  year: number;
+  month: number;
+  selectedDate: string | null;
+  onDateSelect: (date: string) => void;
+}) {
+  const { categories, specialWalletNames } = use(detailDataPromise);
+
+  const { dailyTotals, dailyIncomes } = useMemo(() => {
+    const totals: Record<string, number> = {};
+    const incomes: Record<string, number> = {};
+    for (const e of entries) {
+      const matches =
+        spendingLensKey(
+          e,
+          monthlyWalletName,
+          specialWalletNames,
+          categories,
+        ) === activeFilter;
+      if (!matches) continue;
+      if (e.type === "支出") {
+        totals[e.date] = (totals[e.date] ?? 0) + e.amount;
+      } else if (e.type === "入金") {
+        incomes[e.date] = (incomes[e.date] ?? 0) + e.amount;
+      }
+    }
+    return { dailyTotals: totals, dailyIncomes: incomes };
+  }, [
+    entries,
+    categories,
+    specialWalletNames,
+    monthlyWalletName,
+    activeFilter,
+  ]);
+
+  return (
+    <MonthCalendar
+      year={year}
+      month={month}
+      dailyTotals={dailyTotals}
+      dailyIncomes={dailyIncomes}
+      selectedDate={selectedDate}
+      onDateSelect={onDateSelect}
+      lensActive
+    />
+  );
+}
+
 // ---- カテゴリ選択行 --------------------------------------------------------
 
 function EntryRow({
@@ -821,7 +889,8 @@ export default function CalendarPage() {
 
   const [year, month] = selectedMonth.split("-").map(Number);
 
-  // カレンダーセルは常に全エントリ表示（deferred データ不要）。
+  // レンズ未適用時（およびレンズ適用中の fallback）に使う全エントリ合計。
+  // deferred データ不要で即時描画できる。レンズ適用時は FilteredMonthCalendar が組み直す。
   const dailyTotals = useMemo(() => {
     const map: Record<string, number> = {};
     for (const e of entries) {
@@ -878,14 +947,44 @@ export default function CalendarPage() {
         上下のみ薄いボーダーで区切る。
       */}
       <div className="-mx-5 border-y border-border/40 bg-card">
-        <MonthCalendar
-          year={year}
-          month={month}
-          dailyTotals={dailyTotals}
-          dailyIncomes={dailyIncomes}
-          selectedDate={selectedDate}
-          onDateSelect={handleDateSelect}
-        />
+        {activeFilter === null ? (
+          // レンズ未適用時は全エントリ合計を即時描画（deferred データ不要）。
+          <MonthCalendar
+            year={year}
+            month={month}
+            dailyTotals={dailyTotals}
+            dailyIncomes={dailyIncomes}
+            selectedDate={selectedDate}
+            onDateSelect={handleDateSelect}
+          />
+        ) : (
+          // レンズ適用中は deferred データで該当カテゴリのみの合計に組み直す。
+          // フィルタチップ自体が deferred 解決後にしか現れないため fallback はほぼ通らないが、
+          // 念のため全合計表示でセルの欠落を防ぐ。
+          <Suspense
+            fallback={
+              <MonthCalendar
+                year={year}
+                month={month}
+                dailyTotals={dailyTotals}
+                dailyIncomes={dailyIncomes}
+                selectedDate={selectedDate}
+                onDateSelect={handleDateSelect}
+              />
+            }
+          >
+            <FilteredMonthCalendar
+              detailDataPromise={detailDataPromise}
+              entries={entries}
+              monthlyWalletName={monthlyWalletName}
+              activeFilter={activeFilter}
+              year={year}
+              month={month}
+              selectedDate={selectedDate}
+              onDateSelect={handleDateSelect}
+            />
+          </Suspense>
+        )}
       </div>
 
       {/* 日別詳細パネル（オーバーレイなし・ナビ上部に固定） */}

@@ -51,6 +51,9 @@ type Props = {
   dailyIncomes: Record<string, number>;
   selectedDate: string | null;
   onDateSelect: (date: string) => void;
+  // カテゴリレンズ適用中フラグ。true のとき貯金猫アイコンを抑制する
+  // （該当カテゴリの支出が無いだけの日に猫が並ぶと「貯金できた日」の意味が崩れるため）。
+  lensActive?: boolean;
 };
 
 export function MonthCalendar({
@@ -60,6 +63,7 @@ export function MonthCalendar({
   dailyIncomes,
   selectedDate,
   onDateSelect,
+  lensActive = false,
 }: Props) {
   const todayStr = getTodayStr();
   const cells = buildCells(year, month);
@@ -103,7 +107,10 @@ export function MonthCalendar({
           const isToday = cell.dateStr === todayStr;
           const isPast = cell.dateStr < todayStr;
           const isSavingDay =
-            isPast && total === undefined && income === undefined;
+            !lensActive &&
+            isPast &&
+            total === undefined &&
+            income === undefined;
           const isSun = cell.colIdx === 0;
           const isSat = cell.colIdx === 6;
 
