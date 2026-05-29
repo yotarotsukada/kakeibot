@@ -51,8 +51,6 @@ type Props = {
   dailyIncomes: Record<string, number>;
   selectedDate: string | null;
   onDateSelect: (date: string) => void;
-  /** カテゴリレンズ適用中。貯金猫アイコンを抑制する（未支出日 ≠ 貯金日になるため）。 */
-  filterActive?: boolean;
 };
 
 export function MonthCalendar({
@@ -62,7 +60,6 @@ export function MonthCalendar({
   dailyIncomes,
   selectedDate,
   onDateSelect,
-  filterActive = false,
 }: Props) {
   const todayStr = getTodayStr();
   const cells = buildCells(year, month);
@@ -106,10 +103,7 @@ export function MonthCalendar({
           const isToday = cell.dateStr === todayStr;
           const isPast = cell.dateStr < todayStr;
           const isSavingDay =
-            isPast &&
-            total === undefined &&
-            income === undefined &&
-            !filterActive;
+            isPast && total === undefined && income === undefined;
           const isSun = cell.colIdx === 0;
           const isSat = cell.colIdx === 6;
 
