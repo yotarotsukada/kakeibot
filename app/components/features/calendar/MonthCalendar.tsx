@@ -102,7 +102,8 @@ export function MonthCalendar({
           const isSelected = cell.dateStr === selectedDate;
           const isToday = cell.dateStr === todayStr;
           const isPast = cell.dateStr < todayStr;
-          const isSavingDay = isPast && total === undefined && income === undefined;
+          const isSavingDay =
+            isPast && total === undefined && income === undefined;
           const isSun = cell.colIdx === 0;
           const isSat = cell.colIdx === 6;
 
@@ -146,12 +147,18 @@ export function MonthCalendar({
                   </span>
                 )}
                 {income !== undefined && (
-                  <span className="text-[9px] font-bold font-numeric tabular-nums leading-none" style={{ color: COLOR_INCOME_CELL }}>
+                  <span
+                    className="text-[9px] font-bold font-numeric tabular-nums leading-none"
+                    style={{ color: COLOR_INCOME_CELL }}
+                  >
                     +{formatCellAmount(income)}
                   </span>
                 )}
                 {isSavingDay && (
-                  <CatSavingsIcon size={13} className="text-primary/70 -mt-0.5" />
+                  <CatSavingsIcon
+                    size={13}
+                    className="text-primary/70 -mt-0.5"
+                  />
                 )}
               </div>
             </button>

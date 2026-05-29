@@ -1,5 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, use, useEffect, useMemo, useState } from "react";
 import { useFetcher, useLoaderData } from "react-router";
+import {
+  spendingLensKey,
+  UNCATEGORIZED_KEY,
+} from "~/components/features/calendar/lens";
 import { MonthCalendar } from "~/components/features/calendar/MonthCalendar";
 import { getCategoryColor } from "~/components/features/wallet/categoryColors";
 import { MonthSelector } from "~/components/features/wallet/MonthSelector";
@@ -9,7 +13,11 @@ import {
   ValidationError,
   wrapUnknownError,
 } from "~/domain/errors";
-import type { IncomeEntryWithId, LedgerEntryWithId, SpendingEntryWithId } from "~/domain/storage";
+import type {
+  IncomeEntryWithId,
+  LedgerEntryWithId,
+  SpendingEntryWithId,
+} from "~/domain/storage";
 import { createStorage } from "~/infra/factory";
 import {
   type ActionError,
@@ -18,14 +26,15 @@ import {
 } from "~/lib/action-result";
 import { requireAuth } from "~/lib/auth";
 import { buildMonthRange, getCurrentMonthJST, isValidMonth } from "~/lib/date";
+import { cn } from "~/lib/utils";
 import type { Route } from "./+types/calendar";
 
 // ---- 入金表示用カラー --------------------------------------------------------
 
-const COLOR_INCOME_BG     = "oklch(0.93 0.02 165)";  // 入金カード背景（落ち着いた薄緑）
-const COLOR_INCOME_DOT    = "oklch(0.68 0.09 165)";  // 入金ドット
-const COLOR_INCOME_AMOUNT = "oklch(0.48 0.10 165)";  // 入金カード内の金額テキスト
-const COLOR_INCOME_TOTAL  = "oklch(0.55 0.10 165)";  // 日別パネルの入金合計テキスト
+const COLOR_INCOME_BG = "oklch(0.93 0.02 165)"; // 入金カード背景（落ち着いた薄緑）
+const COLOR_INCOME_DOT = "oklch(0.68 0.09 165)"; // 入金ドット
+const COLOR_INCOME_AMOUNT = "oklch(0.48 0.10 165)"; // 入金カード内の金額テキスト
+const COLOR_INCOME_TOTAL = "oklch(0.55 0.10 165)"; // 日別パネルの入金合計テキスト
 
 export function meta(_args: Route.MetaArgs) {
   return [{ title: "ふたりの家計簿 | カレンダー" }];
@@ -45,31 +54,32 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     : currentMonth;
 
   const monthlyWalletName = `${selectedMonth}通常`;
-  const [entries, budgetRecords, wallets, users] = await Promise.all([
-    storage.getLedgerEntriesByMonth(selectedMonth),
+
+  // カレンダーグリッドに必要なエントリだけ先行 await する。
+  // 残り 3 つは並走させたまま deferred Promise として返す。
+  const entries = await storage.getLedgerEntriesByMonth(selectedMonth);
+
+  const detailDataPromise = Promise.all([
     storage.getBudgetRecords(monthlyWalletName),
     storage.getWallets(),
     storage.getUsers(),
-  ]);
-
-  const categories = budgetRecords.map((b) => b.categoryName);
-  const specialWalletNames = wallets
-    .filter((w) => w.type === "特別")
-    .map((w) => w.name);
-  const unsettledSpecialWallets = wallets
-    .filter((w) => w.type === "特別" && !w.settled)
-    .map((w) => w.name);
-  const userNames = users.map((u) => u.name);
+  ]).then(([budgetRecords, wallets, users]) => ({
+    categories: budgetRecords.map((b) => b.categoryName),
+    specialWalletNames: wallets
+      .filter((w) => w.type === "特別")
+      .map((w) => w.name),
+    unsettledSpecialWallets: wallets
+      .filter((w) => w.type === "特別" && !w.settled)
+      .map((w) => w.name),
+    userNames: users.map((u) => u.name),
+  }));
 
   return {
     entries,
-    categories,
-    specialWalletNames,
-    unsettledSpecialWallets,
+    detailDataPromise,
     monthlyWalletName,
     selectedMonth,
     monthRange,
-    userNames,
   };
 }
 
@@ -98,7 +108,11 @@ export async function action({
     const walletName = String(formData.get("walletName") ?? "");
     const categoryName = String(formData.get("categoryName") ?? "");
     try {
-      await storage.updateLedgerEntryAttribution(entryId, walletName, categoryName);
+      await storage.updateLedgerEntryAttribution(
+        entryId,
+        walletName,
+        categoryName,
+      );
       return null;
     } catch (e) {
       const wrapped = e instanceof GoogleSheetsError ? e : wrapUnknownError(e);
@@ -162,9 +176,119 @@ function decodeAttribution(
   return { walletName: monthlyWalletName, categoryName: name };
 }
 
-// ---- カテゴリ選択行 --------------------------------------------------------
+// ---- カテゴリ絞り込みチップ ------------------------------------------------
+
+type CalendarDetailData = {
+  categories: string[];
+  specialWalletNames: string[];
+  unsettledSpecialWallets: string[];
+  userNames: string[];
+};
 
 const UNCATEGORIZED_COLOR = "oklch(0.72 0 0)";
+
+function FilterChip({
+  label,
+  color,
+  active,
+  onClick,
+}: {
+  label: string;
+  color?: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "shrink-0 inline-flex items-center gap-1 rounded-sm px-2 py-0.5 text-[11px] font-medium transition-colors active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+        active
+          ? "bg-primary text-primary-foreground"
+          : "bg-muted text-foreground/70 hover:bg-muted/70",
+      )}
+    >
+      {color && (
+        <span
+          className="size-1.5 rounded-full shrink-0"
+          style={{ backgroundColor: active ? "currentColor" : color }}
+          aria-hidden
+        />
+      )}
+      {label}
+    </button>
+  );
+}
+
+/** deferred データが揃ったら描画するチップ列。Suspense の子として使う。 */
+function FilterChipsRow({
+  detailDataPromise,
+  entries,
+  monthlyWalletName,
+  activeFilter,
+  onFilterChange,
+}: {
+  detailDataPromise: Promise<CalendarDetailData>;
+  entries: LedgerEntryWithId[];
+  monthlyWalletName: string;
+  activeFilter: string | null;
+  onFilterChange: (filter: string | null) => void;
+}) {
+  const { categories, specialWalletNames } = use(detailDataPromise);
+
+  const chips = useMemo(() => {
+    const present = new Set<string>();
+    for (const e of entries) {
+      const key = spendingLensKey(
+        e,
+        monthlyWalletName,
+        specialWalletNames,
+        categories,
+      );
+      if (key !== null) present.add(key);
+    }
+    const result: { key: string; label: string; color: string }[] = [];
+    categories.forEach((cat, i) => {
+      if (present.has(cat))
+        result.push({ key: cat, label: cat, color: getCategoryColor(i) });
+    });
+    if (present.has(UNCATEGORIZED_KEY)) {
+      result.push({
+        key: UNCATEGORIZED_KEY,
+        label: "未分類",
+        color: UNCATEGORIZED_COLOR,
+      });
+    }
+    return result;
+  }, [entries, categories, specialWalletNames, monthlyWalletName]);
+
+  if (chips.length === 0) return null;
+
+  return (
+    <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-5 px-5 py-0.5">
+      <FilterChip
+        label="すべて"
+        active={activeFilter === null}
+        onClick={() => onFilterChange(null)}
+      />
+      {chips.map((chip) => (
+        <FilterChip
+          key={chip.key || "__misc__"}
+          label={chip.label}
+          color={chip.color}
+          active={activeFilter === chip.key}
+          onClick={() =>
+            onFilterChange(activeFilter === chip.key ? null : chip.key)
+          }
+        />
+      ))}
+    </div>
+  );
+}
+
+// ---- カテゴリ選択行 --------------------------------------------------------
 
 function EntryRow({
   entry,
@@ -190,7 +314,12 @@ function EntryRow({
   useActionErrorToast(actionData);
   useActionErrorToast(actorActionData);
 
-  const currentAttribution = encodeAttribution(entry, monthlyWalletName, specialWalletNames, categories);
+  const currentAttribution = encodeAttribution(
+    entry,
+    monthlyWalletName,
+    specialWalletNames,
+    categories,
+  );
   const optimisticAttribution = useMemo(() => {
     const fd = fetcher.formData;
     if (!fd) return currentAttribution;
@@ -322,7 +451,9 @@ function EntryRow({
                   ? "shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 active:bg-amber-200 transition-colors disabled:opacity-50"
                   : "shrink-0 text-[10px] px-1.5 py-0.5 rounded-full text-muted-foreground/40 border border-border/30 hover:text-muted-foreground/70 hover:border-border/60 transition-colors disabled:opacity-30"
               }
-              aria-label={actorLabel ? `${actorLabel}（タップで変更）` : "立替を設定"}
+              aria-label={
+                actorLabel ? `${actorLabel}（タップで変更）` : "立替を設定"
+              }
             >
               {actorLabel ?? "共同"}
             </button>
@@ -354,7 +485,9 @@ function EntryRow({
           <div
             className="relative w-full max-w-md rounded-t-3xl bg-card border-t border-x border-border/50 shadow-[0_-8px_40px_-4px_oklch(0.30_0.02_30_/_0.20)] overflow-hidden transition-transform duration-[250ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
             style={{
-              transform: actorModalVisible ? "translateY(0)" : "translateY(100%)",
+              transform: actorModalVisible
+                ? "translateY(0)"
+                : "translateY(100%)",
             }}
           >
             {/* ドラッグハンドル */}
@@ -370,7 +503,8 @@ function EntryRow({
             {/* 選択肢 */}
             <div className="px-3 pb-4">
               {(["共同", ...userNames] as string[]).map((name) => {
-                const label = name === "共同" ? "共同（立替なし）" : `${name}立替`;
+                const label =
+                  name === "共同" ? "共同（立替なし）" : `${name}立替`;
                 const isSelected = optimisticActor === name;
                 return (
                   <button
@@ -389,7 +523,9 @@ function EntryRow({
                       {label}
                     </span>
                     {isSelected && (
-                      <span className="text-primary font-bold text-base">✓</span>
+                      <span className="text-primary font-bold text-base">
+                        ✓
+                      </span>
                     )}
                   </button>
                 );
@@ -452,6 +588,71 @@ function IncomeRow({ entry }: { entry: IncomeEntryWithId }) {
 
 // ---- 日別パネル（スライドアップ、オーバーレイなし） ----------------------
 
+/** deferred データ待ちのスケルトン。実際はほぼ瞬時に切り替わる。 */
+function DayPanelSkeleton({
+  date,
+  onClose,
+}: {
+  date: string;
+  onClose: () => void;
+}) {
+  const [, m, d] = date.split("-");
+  const label = `${Number(m)}月${Number(d)}日`;
+  return (
+    <div className="fixed inset-x-0 z-30" style={{ bottom: 68 }}>
+      <div className="max-w-md mx-auto rounded-t-3xl bg-card border-t border-x border-border/50 shadow-[0_-8px_40px_-4px_oklch(0.30_0.02_30_/_0.20)]">
+        <div className="flex justify-center pt-3 pb-2">
+          <div className="w-10 h-1 rounded-full bg-border/80" />
+        </div>
+        <div className="flex items-start justify-between px-5 pb-5">
+          <p className="font-bold text-lg">{label}</p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-muted-foreground/50 hover:text-foreground transition-colors p-1 -mr-1 mt-0.5"
+            aria-label="閉じる"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** deferred データが揃ったら DayDetailPanel を描画する薄いラッパー。 */
+function DayDetailPanelDeferred({
+  detailDataPromise,
+  date,
+  entries,
+  monthlyWalletName,
+  activeFilter,
+  onClose,
+}: {
+  detailDataPromise: Promise<CalendarDetailData>;
+  date: string;
+  entries: LedgerEntryWithId[];
+  monthlyWalletName: string;
+  activeFilter: string | null;
+  onClose: () => void;
+}) {
+  const { categories, specialWalletNames, unsettledSpecialWallets, userNames } =
+    use(detailDataPromise);
+  return (
+    <DayDetailPanel
+      date={date}
+      entries={entries}
+      categories={categories}
+      specialWalletNames={specialWalletNames}
+      unsettledSpecialWallets={unsettledSpecialWallets}
+      monthlyWalletName={monthlyWalletName}
+      userNames={userNames}
+      activeFilter={activeFilter}
+      onClose={onClose}
+    />
+  );
+}
+
 function DayDetailPanel({
   date,
   entries,
@@ -460,6 +661,7 @@ function DayDetailPanel({
   unsettledSpecialWallets,
   monthlyWalletName,
   userNames,
+  activeFilter,
   onClose,
 }: {
   date: string;
@@ -469,6 +671,7 @@ function DayDetailPanel({
   unsettledSpecialWallets: string[];
   monthlyWalletName: string;
   userNames: string[];
+  activeFilter: string | null;
   onClose: () => void;
 }) {
   const [visible, setVisible] = useState(false);
@@ -486,11 +689,20 @@ function DayDetailPanel({
 
   const [, m, d] = date.split("-");
   const label = `${Number(m)}月${Number(d)}日`;
+  // レンズ適用中はヘッダ合計もカレンダーセルと揃え、該当カテゴリのみ集計する。
+  const matchesFilter = (entry: LedgerEntryWithId) =>
+    activeFilter === null ||
+    spendingLensKey(
+      entry,
+      monthlyWalletName,
+      specialWalletNames,
+      categories,
+    ) === activeFilter;
   const totalSpending = entries
-    .filter((e) => e.type === "支出")
+    .filter((e) => e.type === "支出" && matchesFilter(e))
     .reduce((s, e) => s + e.amount, 0);
   const totalIncome = entries
-    .filter((e) => e.type === "入金")
+    .filter((e) => e.type === "入金" && matchesFilter(e))
     .reduce((s, e) => s + e.amount, 0);
 
   return (
@@ -516,7 +728,9 @@ function DayDetailPanel({
               <div className="flex items-center gap-3 mt-0.5">
                 {totalSpending > 0 && (
                   <div className="flex items-baseline gap-1">
-                    <span className="text-[11px] text-muted-foreground">支出</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      支出
+                    </span>
                     <span className="font-numeric tabular-nums font-bold text-base text-primary">
                       ¥{totalSpending.toLocaleString()}
                     </span>
@@ -524,8 +738,13 @@ function DayDetailPanel({
                 )}
                 {totalIncome > 0 && (
                   <div className="flex items-baseline gap-1">
-                    <span className="text-[11px] text-muted-foreground">入金</span>
-                    <span className="font-numeric tabular-nums font-bold text-base" style={{ color: COLOR_INCOME_TOTAL }}>
+                    <span className="text-[11px] text-muted-foreground">
+                      入金
+                    </span>
+                    <span
+                      className="font-numeric tabular-nums font-bold text-base"
+                      style={{ color: COLOR_INCOME_TOTAL }}
+                    >
                       +¥{totalIncome.toLocaleString()}
                     </span>
                   </div>
@@ -550,22 +769,29 @@ function DayDetailPanel({
               この日の記録はありません
             </p>
           ) : (
-            entries.map((entry) =>
-              entry.type === "入金" ? (
-                <IncomeRow key={entry.id} entry={entry} />
-              ) : (
-                <EntryRow
-                  key={entry.id}
-                  entry={entry}
-                  categories={categories}
-                  colorMap={colorMap}
-                  specialWalletNames={specialWalletNames}
-                  unsettledSpecialWallets={unsettledSpecialWallets}
-                  monthlyWalletName={monthlyWalletName}
-                  userNames={userNames}
-                />
-              ),
-            )
+            entries.map((entry) => (
+              <div
+                key={entry.id}
+                className={cn(
+                  "transition-opacity",
+                  !matchesFilter(entry) && "opacity-35",
+                )}
+              >
+                {entry.type === "入金" ? (
+                  <IncomeRow entry={entry} />
+                ) : (
+                  <EntryRow
+                    entry={entry}
+                    categories={categories}
+                    colorMap={colorMap}
+                    specialWalletNames={specialWalletNames}
+                    unsettledSpecialWallets={unsettledSpecialWallets}
+                    monthlyWalletName={monthlyWalletName}
+                    userNames={userNames}
+                  />
+                )}
+              </div>
+            ))
           )}
         </div>
       </div>
@@ -578,16 +804,15 @@ function DayDetailPanel({
 export default function CalendarPage() {
   const {
     entries,
-    categories,
-    specialWalletNames,
-    unsettledSpecialWallets,
+    detailDataPromise,
     monthlyWalletName,
     selectedMonth,
     monthRange,
-    userNames,
   } = useLoaderData<typeof loader>();
 
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  // カテゴリレンズ。null = すべて / カテゴリ名 / UNCATEGORIZED_KEY（未分類）。
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
   const idx = monthRange.indexOf(selectedMonth);
   const prevMonth = idx > 0 ? monthRange[idx - 1] : null;
@@ -596,32 +821,27 @@ export default function CalendarPage() {
 
   const [year, month] = selectedMonth.split("-").map(Number);
 
-  // 日別支出合計マップ
+  // カレンダーセルは常に全エントリ表示（deferred データ不要）。
   const dailyTotals = useMemo(() => {
     const map: Record<string, number> = {};
     for (const e of entries) {
-      if (e.type === "支出") {
-        map[e.date] = (map[e.date] ?? 0) + e.amount;
-      }
+      if (e.type === "支出") map[e.date] = (map[e.date] ?? 0) + e.amount;
     }
     return map;
   }, [entries]);
 
-  // 日別入金合計マップ
   const dailyIncomes = useMemo(() => {
     const map: Record<string, number> = {};
     for (const e of entries) {
-      if (e.type === "入金") {
-        map[e.date] = (map[e.date] ?? 0) + e.amount;
-      }
+      if (e.type === "入金") map[e.date] = (map[e.date] ?? 0) + e.amount;
     }
     return map;
   }, [entries]);
 
-  // 月ナビゲーション時のみパネルを閉じる。
   // biome-ignore lint/correctness/useExhaustiveDependencies: selectedMonth が変化したときだけ実行したい（effect 内部では参照しないが trigger として使用）
   useEffect(() => {
     setSelectedDate(null);
+    setActiveFilter(null);
   }, [selectedMonth]);
 
   const selectedEntries = useMemo(
@@ -642,6 +862,17 @@ export default function CalendarPage() {
         basePath="/calendar"
       />
 
+      {/* カテゴリレンズ: deferred データが揃い次第チップを描画 */}
+      <Suspense fallback={null}>
+        <FilterChipsRow
+          detailDataPromise={detailDataPromise}
+          entries={entries}
+          monthlyWalletName={monthlyWalletName}
+          activeFilter={activeFilter}
+          onFilterChange={setActiveFilter}
+        />
+      </Suspense>
+
       {/*
         横方向は -mx-5 で PageLayout の padding を打ち消して全幅表示。
         上下のみ薄いボーダーで区切る。
@@ -659,16 +890,23 @@ export default function CalendarPage() {
 
       {/* 日別詳細パネル（オーバーレイなし・ナビ上部に固定） */}
       {selectedDate && (
-        <DayDetailPanel
-          date={selectedDate}
-          entries={selectedEntries}
-          categories={categories}
-          specialWalletNames={specialWalletNames}
-          unsettledSpecialWallets={unsettledSpecialWallets}
-          monthlyWalletName={monthlyWalletName}
-          userNames={userNames}
-          onClose={() => setSelectedDate(null)}
-        />
+        <Suspense
+          fallback={
+            <DayPanelSkeleton
+              date={selectedDate}
+              onClose={() => setSelectedDate(null)}
+            />
+          }
+        >
+          <DayDetailPanelDeferred
+            detailDataPromise={detailDataPromise}
+            date={selectedDate}
+            entries={selectedEntries}
+            monthlyWalletName={monthlyWalletName}
+            activeFilter={activeFilter}
+            onClose={() => setSelectedDate(null)}
+          />
+        </Suspense>
       )}
     </PageLayout>
   );
