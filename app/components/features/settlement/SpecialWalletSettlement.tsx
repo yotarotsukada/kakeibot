@@ -17,7 +17,6 @@ export function SpecialWalletSettlement({
 
   return (
     <div className="mt-5 rounded-2xl bg-foreground/[0.03] px-4 py-3.5">
-      {/* 見出し + 精算トグル */}
       <div
         className={cn(
           "flex items-center justify-between gap-3",
@@ -44,61 +43,36 @@ export function SpecialWalletSettlement({
         </button>
       </div>
 
-      {/* 人物ごとの精算カードを横並び（ダッシュボードの精算と同レイアウト） */}
       {hasBreakdown && (
-        <div className="grid grid-cols-2 gap-2.5">
-          {perUser.map((u) => {
+        <div className="grid grid-cols-2 divide-x divide-border/40">
+          {perUser.map((u, i) => {
             const isReceiver = transfer?.to === u.userName;
             const isSender = transfer?.from === u.userName;
-            const actions: {
-              label: string;
-              amount: number;
-              primary: boolean;
-            }[] = [];
+            const actions: { label: string; amount: number }[] = [];
             if (isReceiver && transfer) {
-              actions.push({
-                label: "受け取り",
-                amount: transfer.amount,
-                primary: true,
-              });
+              actions.push({ label: "受け取り", amount: transfer.amount });
             } else {
               if (u.deposit > 0) {
-                actions.push({
-                  label: "振込",
-                  amount: u.deposit,
-                  primary: false,
-                });
+                actions.push({ label: "振込", amount: u.deposit });
               }
               if (isSender && transfer) {
-                actions.push({
-                  label: "送金",
-                  amount: transfer.amount,
-                  primary: true,
-                });
+                actions.push({ label: "送金", amount: transfer.amount });
               }
             }
 
             return (
-              <div
-                key={u.userName}
-                className="rounded-2xl bg-background ring-1 ring-foreground/[0.05] px-3.5 pt-3 pb-3.5"
-              >
-                <p className="text-[10px] font-semibold text-muted-foreground/80 truncate mb-2.5">
+              <div key={u.userName} className={i === 0 ? "pr-3.5" : "pl-3.5"}>
+                <p className="text-[10px] font-semibold text-muted-foreground/80 truncate mb-2">
                   {u.userName}
                 </p>
                 {actions.length > 0 ? (
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     {actions.map((a) => (
                       <div key={a.label}>
                         <p className="text-[10px] text-muted-foreground/60 mb-0.5">
                           {a.label}
                         </p>
-                        <p
-                          className={cn(
-                            "font-numeric text-sm font-bold tabular-nums leading-none",
-                            a.primary ? "text-primary" : "text-foreground",
-                          )}
-                        >
+                        <p className="font-numeric text-sm font-bold tabular-nums leading-none text-foreground">
                           <span className="text-xs font-bold mr-0.5 align-baseline opacity-70">
                             ¥
                           </span>
@@ -112,7 +86,7 @@ export function SpecialWalletSettlement({
                     精算なし
                   </p>
                 )}
-                <div className="mt-2.5 pt-2.5 border-t border-border/60">
+                <div className="mt-2.5 pt-2.5 border-t border-border/40">
                   <p className="text-[10px] text-muted-foreground/60">立替</p>
                   <p className="font-numeric text-xs tabular-nums text-muted-foreground mt-0.5">
                     ¥{u.advanced.toLocaleString()}
