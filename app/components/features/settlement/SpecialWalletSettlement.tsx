@@ -86,7 +86,7 @@ export function SpecialWalletSettlement({
                     精算なし
                   </p>
                 )}
-                <div className="mt-2.5 pt-2.5 border-t border-border/40">
+                <div className="mt-2.5">
                   <p className="text-[10px] text-muted-foreground/60">立替</p>
                   <p className="font-numeric text-xs tabular-nums text-muted-foreground mt-0.5">
                     ¥{u.advanced.toLocaleString()}
