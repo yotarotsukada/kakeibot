@@ -338,7 +338,7 @@ function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
       )}
     >
       <div className="px-6 pt-5 pb-5">
-        {/* ヘッダー行: 財布名 + 精算バッジ / 精算ボタン */}
+        {/* ヘッダー行: 財布名 + 精算済みバッジ（トグルは精算カード内） */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 min-w-0">
             <WalletNameEditor name={wallet.name} disabled={isSettled} />
@@ -354,31 +354,6 @@ function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
               </span>
             )}
           </div>
-
-          <button
-            type="button"
-            disabled={isSettling}
-            onClick={() =>
-              settleFetcher.submit(
-                {
-                  intent: "toggle-settled",
-                  walletName: wallet.name,
-                  settled: String(!isSettled),
-                },
-                { method: "post" },
-              )
-            }
-            className={cn(
-              "shrink-0 h-7 px-3 text-[11px] font-semibold rounded-full border transition-all duration-200",
-              isSettling
-                ? "animate-pulse text-muted-foreground/50 border-border/40 cursor-wait"
-                : isSettled
-                  ? "text-muted-foreground/60 border-border/50 hover:text-foreground/80 hover:border-border"
-                  : "text-foreground/75 border-foreground/20 bg-foreground/[0.04] hover:bg-foreground/[0.08]",
-            )}
-          >
-            {isSettling ? "処理中…" : isSettled ? "未精算に戻す" : "精算を完了"}
-          </button>
         </div>
 
         {/* 予算未設定: コンパクト表示。設定時は残り/オーバー + バー + 使用/予算 */}
@@ -442,10 +417,22 @@ function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
           </>
         )}
 
-        {/* 精算: 未精算かつ精算対象の支出があるときだけ表示 */}
-        {!isSettled && settlement.total > 0 && (
-          <SpecialWalletSettlement settlement={settlement} />
-        )}
+        {/* 精算カード: トグルを内包し、未精算かつ精算対象がある場合のみ明細を出す */}
+        <SpecialWalletSettlement
+          settlement={settlement}
+          isSettled={isSettled}
+          isSettling={isSettling}
+          onToggle={() =>
+            settleFetcher.submit(
+              {
+                intent: "toggle-settled",
+                walletName: wallet.name,
+                settled: String(!isSettled),
+              },
+              { method: "post" },
+            )
+          }
+        />
       </div>
 
       {/* 予算編集（月次予算の編集行と同じ dirty-aware パターンで統一） */}
