@@ -1,5 +1,3 @@
-import { ArrowRight02Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import type { WalletSettlement } from "~/features/budget/special-wallet";
 import { cn } from "~/lib/utils";
 
@@ -15,7 +13,6 @@ export function SpecialWalletSettlement({
   onToggle: () => void;
 }) {
   const { perUser, transfer } = settlement;
-  const receiverName = transfer?.to;
   // 精算明細は未精算かつ精算対象の支出があるときだけ。精算済みは見出しとトグルのみ。
   const hasBreakdown = !isSettled && settlement.total > 0;
 
@@ -49,71 +46,81 @@ export function SpecialWalletSettlement({
       </div>
 
       {hasBreakdown && (
-        <>
-          <div className="space-y-2">
-            {perUser.map((u) => {
-              const isReceiver = u.userName === receiverName;
-              return (
-                <div
-                  key={u.userName}
-                  className="flex items-center justify-between gap-3"
-                >
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold text-foreground truncate">
-                      {u.userName}
-                    </p>
-                    <p className="font-numeric text-[10px] tabular-nums text-muted-foreground/60 mt-0.5">
-                      立替 ¥{u.advanced.toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    {isReceiver && transfer ? (
-                      <>
-                        <p className="text-[10px] text-muted-foreground/60 mb-0.5">
-                          受け取り
-                        </p>
-                        <p className="font-numeric text-sm font-bold tabular-nums text-primary">
-                          ¥{transfer.amount.toLocaleString()}
-                        </p>
-                      </>
-                    ) : u.deposit > 0 ? (
-                      <>
-                        <p className="text-[10px] text-muted-foreground/60 mb-0.5">
-                          支払い
-                        </p>
-                        <p className="font-numeric text-sm font-bold tabular-nums text-foreground">
-                          ¥{u.deposit.toLocaleString()}
-                        </p>
-                      </>
-                    ) : (
-                      <p className="text-[11px] text-muted-foreground/50">
-                        精算なし
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        <div className="space-y-2">
+          {perUser.map((u) => {
+            const isReceiver = transfer?.to === u.userName;
+            const isSender = transfer?.from === u.userName;
+            // 各人の精算アクション。共同口座への入金は「振込」、相手への
+            // 個人間送金は「送金」。送金で個人間のやり取りは示せるため、
+            // from→to の別表示ブロックは設けない。
+            const actions: {
+              label: string;
+              amount: number;
+              primary: boolean;
+            }[] = [];
+            if (isReceiver && transfer) {
+              actions.push({
+                label: "受け取り",
+                amount: transfer.amount,
+                primary: true,
+              });
+            } else {
+              if (u.deposit > 0) {
+                actions.push({
+                  label: "振込",
+                  amount: u.deposit,
+                  primary: false,
+                });
+              }
+              if (isSender && transfer) {
+                actions.push({
+                  label: "送金",
+                  amount: transfer.amount,
+                  primary: true,
+                });
+              }
+            }
 
-          {transfer && (
-            <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-1.5 text-xs font-medium text-foreground min-w-0">
-                <span className="truncate">{transfer.from}</span>
-                <HugeiconsIcon
-                  icon={ArrowRight02Icon}
-                  size={14}
-                  strokeWidth={2.5}
-                  className="text-muted-foreground/70 shrink-0"
-                />
-                <span className="truncate">{transfer.to}</span>
+            return (
+              <div
+                key={u.userName}
+                className="flex items-center justify-between gap-3"
+              >
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-foreground truncate">
+                    {u.userName}
+                  </p>
+                  <p className="font-numeric text-[10px] tabular-nums text-muted-foreground/60 mt-0.5">
+                    立替 ¥{u.advanced.toLocaleString()}
+                  </p>
+                </div>
+                <div className="text-right shrink-0 space-y-1">
+                  {actions.length > 0 ? (
+                    actions.map((a) => (
+                      <div key={a.label}>
+                        <p className="text-[10px] text-muted-foreground/60 mb-0.5">
+                          {a.label}
+                        </p>
+                        <p
+                          className={cn(
+                            "font-numeric text-sm font-bold tabular-nums",
+                            a.primary ? "text-primary" : "text-foreground",
+                          )}
+                        >
+                          ¥{a.amount.toLocaleString()}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground/50">
+                      精算なし
+                    </p>
+                  )}
+                </div>
               </div>
-              <p className="font-numeric text-sm font-bold tabular-nums text-foreground shrink-0">
-                ¥{transfer.amount.toLocaleString()}
-              </p>
-            </div>
-          )}
-        </>
+            );
+          })}
+        </div>
       )}
     </div>
   );
