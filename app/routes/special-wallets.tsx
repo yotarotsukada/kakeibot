@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useActionData, useFetcher, useLoaderData } from "react-router";
 import { InlineBudgetField } from "~/components/features/budget/InlineBudgetField";
 import { MoneyInput } from "~/components/features/budget/MoneyInput";
+import { SpecialWalletSettlement } from "~/components/features/settlement/SpecialWalletSettlement";
 import { SPECIAL_WALLET_ACCENT_COLOR } from "~/components/features/wallet/categoryColors";
 import { PageLayout } from "~/components/layout/PageLayout";
 import { Button } from "~/components/ui/button";
@@ -303,7 +304,7 @@ function WalletNameEditor({
 }
 
 function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
-  const { wallet, totalBudget, totalUsed, usagePercentage } = item;
+  const { wallet, totalBudget, totalUsed, usagePercentage, settlement } = item;
 
   const settleFetcher = useFetcher<ActionError | null>();
   const budgetFetcher = useFetcher<ActionError | null>();
@@ -413,24 +414,37 @@ function SpecialWalletCard({ item }: { item: SpecialWalletSummary }) {
                 <p className="font-numeric text-xs tabular-nums text-muted-foreground">
                   ¥{totalUsed.toLocaleString()}
                 </p>
-                <p className="text-[10px] text-muted-foreground/60 mt-0.5">使用</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+                  使用
+                </p>
               </div>
               <div className="text-right">
                 <p className="font-numeric text-xs tabular-nums text-muted-foreground">
                   ¥{totalBudget.toLocaleString()}
                 </p>
-                <p className="text-[10px] text-muted-foreground/60 mt-0.5">予算</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+                  予算
+                </p>
               </div>
             </div>
           </>
         ) : (
           <>
-            <p className="text-[11px] text-muted-foreground/80 mb-1">予算未設定</p>
+            <p className="text-[11px] text-muted-foreground/80 mb-1">
+              予算未設定
+            </p>
             <p className="font-numeric text-[2.5rem] font-extrabold leading-none tracking-tight tabular-nums text-foreground">
-              <span className="text-2xl font-bold mr-0.5 align-baseline opacity-70">¥</span>
+              <span className="text-2xl font-bold mr-0.5 align-baseline opacity-70">
+                ¥
+              </span>
               {totalUsed.toLocaleString()}
             </p>
           </>
+        )}
+
+        {/* 精算: 未精算かつ精算対象の支出があるときだけ表示 */}
+        {!isSettled && settlement.total > 0 && (
+          <SpecialWalletSettlement settlement={settlement} />
         )}
       </div>
 
