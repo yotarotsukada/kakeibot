@@ -13,16 +13,15 @@ export function SpecialWalletSettlement({
   onToggle: () => void;
 }) {
   const { perUser, transfer } = settlement;
-  // 精算明細は未精算かつ精算対象の支出があるときだけ。精算済みは見出しとトグルのみ。
   const hasBreakdown = !isSettled && settlement.total > 0;
 
   return (
     <div className="mt-5 rounded-2xl bg-foreground/[0.03] px-4 py-3.5">
-      {/* 見出し + 精算トグル: このカードを見たまま精算操作できるよう同じ箱に置く */}
+      {/* 見出し + 精算トグル */}
       <div
         className={cn(
           "flex items-center justify-between gap-3",
-          hasBreakdown && "mb-2.5",
+          hasBreakdown && "mb-3",
         )}
       >
         <p className="text-[11px] font-semibold text-muted-foreground/80">
@@ -45,14 +44,12 @@ export function SpecialWalletSettlement({
         </button>
       </div>
 
+      {/* 人物ごとの精算カードを横並び（ダッシュボードの精算と同レイアウト） */}
       {hasBreakdown && (
-        <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-2.5">
           {perUser.map((u) => {
             const isReceiver = transfer?.to === u.userName;
             const isSender = transfer?.from === u.userName;
-            // 各人の精算アクション。共同口座への入金は「振込」、相手への
-            // 個人間送金は「送金」。送金で個人間のやり取りは示せるため、
-            // from→to の別表示ブロックは設けない。
             const actions: {
               label: string;
               amount: number;
@@ -84,38 +81,42 @@ export function SpecialWalletSettlement({
             return (
               <div
                 key={u.userName}
-                className="flex items-center justify-between gap-3"
+                className="rounded-2xl bg-background ring-1 ring-foreground/[0.05] px-3.5 pt-3 pb-3.5"
               >
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold text-foreground truncate">
-                    {u.userName}
-                  </p>
-                  <p className="font-numeric text-[10px] tabular-nums text-muted-foreground/60 mt-0.5">
-                    立替 ¥{u.advanced.toLocaleString()}
-                  </p>
-                </div>
-                <div className="text-right shrink-0 space-y-1">
-                  {actions.length > 0 ? (
-                    actions.map((a) => (
+                <p className="text-[10px] font-semibold text-muted-foreground/80 truncate mb-2.5">
+                  {u.userName}
+                </p>
+                {actions.length > 0 ? (
+                  <div className="space-y-2">
+                    {actions.map((a) => (
                       <div key={a.label}>
                         <p className="text-[10px] text-muted-foreground/60 mb-0.5">
                           {a.label}
                         </p>
                         <p
                           className={cn(
-                            "font-numeric text-sm font-bold tabular-nums",
+                            "font-numeric text-sm font-bold tabular-nums leading-none",
                             a.primary ? "text-primary" : "text-foreground",
                           )}
                         >
-                          ¥{a.amount.toLocaleString()}
+                          <span className="text-xs font-bold mr-0.5 align-baseline opacity-70">
+                            ¥
+                          </span>
+                          {a.amount.toLocaleString()}
                         </p>
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-[11px] text-muted-foreground/50">
-                      精算なし
-                    </p>
-                  )}
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground/50">
+                    精算なし
+                  </p>
+                )}
+                <div className="mt-2.5 pt-2.5 border-t border-border/60">
+                  <p className="text-[10px] text-muted-foreground/60">立替</p>
+                  <p className="font-numeric text-xs tabular-nums text-muted-foreground mt-0.5">
+                    ¥{u.advanced.toLocaleString()}
+                  </p>
                 </div>
               </div>
             );
