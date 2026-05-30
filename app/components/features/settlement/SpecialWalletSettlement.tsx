@@ -13,7 +13,8 @@ export function SpecialWalletSettlement({
   onToggle: () => void;
 }) {
   const { perUser, transfer } = settlement;
-  const hasBreakdown = !isSettled && settlement.total > 0;
+  // 精算済みでも明細は残す（何をどう精算したかを後から確認できるように）。
+  const hasBreakdown = settlement.total > 0;
 
   return (
     <div className="mt-5 rounded-2xl bg-foreground/[0.03] px-4 py-3.5">
