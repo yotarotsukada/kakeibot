@@ -223,8 +223,48 @@ function FilterChip({
   );
 }
 
-/** deferred データが揃ったら描画するチップ列。Suspense の子として使う。 */
+/**
+ * カテゴリレンズの行。「すべて」チップと行コンテナは deferred データ不要で
+ * 即時描画し、行の高さを最初の描画から確保する。カテゴリチップは
+ * detailDataPromise の解決後に横スクロール末尾へ追従するだけなので、
+ * 縦方向のレイアウトシフト（がたつき）は発生しない。
+ * 初期状態は常に activeFilter === null（=「すべて」）であることを利用している。
+ */
 function FilterChipsRow({
+  detailDataPromise,
+  entries,
+  monthlyWalletName,
+  activeFilter,
+  onFilterChange,
+}: {
+  detailDataPromise: Promise<CalendarDetailData>;
+  entries: LedgerEntryWithId[];
+  monthlyWalletName: string;
+  activeFilter: string | null;
+  onFilterChange: (filter: string | null) => void;
+}) {
+  return (
+    <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-5 px-5 py-0.5">
+      <FilterChip
+        label="すべて"
+        active={activeFilter === null}
+        onClick={() => onFilterChange(null)}
+      />
+      <Suspense fallback={null}>
+        <FilterCategoryChips
+          detailDataPromise={detailDataPromise}
+          entries={entries}
+          monthlyWalletName={monthlyWalletName}
+          activeFilter={activeFilter}
+          onFilterChange={onFilterChange}
+        />
+      </Suspense>
+    </div>
+  );
+}
+
+/** deferred データが揃ったら描画するカテゴリチップ群。Suspense の子として使う。 */
+function FilterCategoryChips({
   detailDataPromise,
   entries,
   monthlyWalletName,
@@ -265,15 +305,8 @@ function FilterChipsRow({
     return result;
   }, [entries, categories, specialWalletNames, monthlyWalletName]);
 
-  if (chips.length === 0) return null;
-
   return (
-    <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-5 px-5 py-0.5">
-      <FilterChip
-        label="すべて"
-        active={activeFilter === null}
-        onClick={() => onFilterChange(null)}
-      />
+    <>
       {chips.map((chip) => (
         <FilterChip
           key={chip.key || "__misc__"}
@@ -285,7 +318,7 @@ function FilterChipsRow({
           }
         />
       ))}
-    </div>
+    </>
   );
 }
 
@@ -934,16 +967,17 @@ export default function CalendarPage() {
         basePath="/calendar"
       />
 
-      {/* カテゴリレンズ: deferred データが揃い次第チップを描画 */}
-      <Suspense fallback={null}>
-        <FilterChipsRow
-          detailDataPromise={detailDataPromise}
-          entries={entries}
-          monthlyWalletName={monthlyWalletName}
-          activeFilter={activeFilter}
-          onFilterChange={setActiveFilter}
-        />
-      </Suspense>
+      {/*
+        カテゴリレンズ: 「すべて」チップは即時描画して行の高さを先に確保し、
+        カテゴリチップは deferred 解決後に追従させる（がたつき防止）。
+      */}
+      <FilterChipsRow
+        detailDataPromise={detailDataPromise}
+        entries={entries}
+        monthlyWalletName={monthlyWalletName}
+        activeFilter={activeFilter}
+        onFilterChange={setActiveFilter}
+      />
 
       {/*
         横方向は -mx-5 で PageLayout の padding を打ち消して全幅表示。
