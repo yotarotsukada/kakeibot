@@ -2,8 +2,6 @@ import type { BudgetRecord, Wallet } from "~/domain/budget/budget";
 import type { LedgerEntry, SpendingEntry } from "~/domain/ledger/entry";
 import type {
   LedgerEntryWithId,
-  PoolOperation,
-  PoolOperationWithId,
   SpendingEntryWithId,
   Storage,
   User,
@@ -16,7 +14,6 @@ type TestStorageInit = {
   budgets?: BudgetRecord[];
   ledger?: StoredEntry[];
   users?: Record<string, string>;
-  poolOps?: PoolOperationWithId[];
 };
 
 /**
@@ -28,7 +25,6 @@ export function createTestStorage(init: TestStorageInit = {}): Storage {
   let budgets: BudgetRecord[] = structuredClone(init.budgets ?? []);
   const ledger: StoredEntry[] = structuredClone(init.ledger ?? []);
   const users = new Map(Object.entries(init.users ?? {}));
-  const poolOps: PoolOperationWithId[] = structuredClone(init.poolOps ?? []);
   let idSeq = 0;
 
   return {
@@ -171,21 +167,6 @@ export function createTestStorage(init: TestStorageInit = {}): Storage {
         lineUserId,
         name,
       }));
-    },
-
-    async deletePoolOperation(id: string) {
-      const idx = poolOps.findIndex((op) => op.id === id);
-      if (idx !== -1) poolOps.splice(idx, 1);
-    },
-
-    async appendPoolOperations(operations: PoolOperation[]) {
-      for (const op of operations) {
-        poolOps.push({ id: `pool-${idSeq++}`, ...op });
-      }
-    },
-
-    async getAllPoolOperations(): Promise<PoolOperationWithId[]> {
-      return [...poolOps];
     },
   };
 }
