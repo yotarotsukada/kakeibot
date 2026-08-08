@@ -4,7 +4,6 @@ import { SPECIAL_WALLET_ACCENT_COLOR } from "~/components/features/wallet/catego
 import { MonthSelector } from "~/components/features/wallet/MonthSelector";
 import { WalletCard } from "~/components/features/wallet/WalletCard";
 import { PageLayout } from "~/components/layout/PageLayout";
-import { Card } from "~/components/ui/card";
 import { unwrap } from "~/domain/result";
 import { getDashboardData } from "~/features/budget/dashboard";
 import { createStorage } from "~/infra/factory";
@@ -37,7 +36,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 export default function Home() {
   const {
     normalWalletName,
-    normalWalletExists,
     totalBudget,
     totalUsed,
     totalUsagePercentage,
@@ -68,25 +66,14 @@ export default function Home() {
           basePath="/"
         />
 
-        {!normalWalletExists ? (
-          <Card className="rounded-3xl bg-amber-50/60 ring-1 ring-amber-200/60 px-5 py-5">
-            <p className="text-xs font-medium text-amber-700 mb-1">未設定</p>
-            <p className="text-sm text-amber-900/80 leading-relaxed">
-              この月の通常財布が見つかりません。
-              <br />
-              スプレッドシートで作成してください。
-            </p>
-          </Card>
-        ) : (
-          <WalletCard
-            walletName={normalWalletName}
-            totalBudget={totalBudget}
-            totalUsed={totalUsed}
-            usagePercentage={totalUsagePercentage}
-            categoryUsages={categoryUsages}
-            miscUsed={miscUsed}
-          />
-        )}
+        <WalletCard
+          walletName={normalWalletName}
+          totalBudget={totalBudget}
+          totalUsed={totalUsed}
+          usagePercentage={totalUsagePercentage}
+          categoryUsages={categoryUsages}
+          miscUsed={miscUsed}
+        />
       </section>
 
       {/*
