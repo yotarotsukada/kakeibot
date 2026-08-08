@@ -9,8 +9,6 @@ import { GoogleSheetsError } from "~/domain/errors";
 import type { LedgerEntry } from "~/domain/ledger/entry";
 import type {
   LedgerEntryWithId,
-  PoolOperation,
-  PoolOperationWithId,
   SpendingEntryWithId,
   Storage,
   User,
@@ -709,97 +707,6 @@ export class GoogleSheetsStorage implements Storage {
     } catch (err) {
       if (err instanceof GoogleSheetsError) throw err;
       throw new GoogleSheetsError("ユーザーマスタの取得に失敗しました", err);
-    }
-  }
-
-  async deletePoolOperation(id: string): Promise<void> {
-    try {
-      const token = await this.getAccessToken();
-      const range = `${SHEET_NAMES.SAVINGS_OPS}!A:A`;
-      const readUrl = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(range)}`;
-      const readRes = await fetch(readUrl, { headers: { Authorization: `Bearer ${token}` } });
-      if (!readRes.ok) throw new Error(`Sheets read failed: ${readRes.status}`);
-      const data = (await readRes.json()) as { values?: string[][] };
-      const rows = data.values ?? [];
-      const rowIdx = rows.findIndex((row) => row[0] === id);
-      if (rowIdx === -1) return;
-
-      const metaUrl = `${SHEETS_BASE}/${this.spreadsheetId}?fields=sheets.properties`;
-      const metaRes = await fetch(metaUrl, { headers: { Authorization: `Bearer ${token}` } });
-      if (!metaRes.ok) throw new Error(`Sheets metadata failed: ${metaRes.status}`);
-      const meta = (await metaRes.json()) as {
-        sheets: { properties: { sheetId: number; title: string } }[];
-      };
-      const sheet = meta.sheets.find((s) => s.properties.title === SHEET_NAMES.SAVINGS_OPS);
-      if (!sheet) throw new Error(`シート "${SHEET_NAMES.SAVINGS_OPS}" が見つかりません`);
-
-      const batchUrl = `${SHEETS_BASE}/${this.spreadsheetId}:batchUpdate`;
-      const batchRes = await fetch(batchUrl, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          requests: [{ deleteDimension: { range: { sheetId: sheet.properties.sheetId, dimension: "ROWS", startIndex: rowIdx, endIndex: rowIdx + 1 } } }],
-        }),
-      });
-      if (!batchRes.ok) throw new Error(`Sheets delete failed: ${batchRes.status} ${await batchRes.text()}`);
-    } catch (err) {
-      if (err instanceof GoogleSheetsError) throw err;
-      throw new GoogleSheetsError("貯金操作の削除に失敗しました", err);
-    }
-  }
-
-  async appendPoolOperations(operations: PoolOperation[]): Promise<void> {
-    try {
-      const token = await this.getAccessToken();
-      const range = `${SHEET_NAMES.SAVINGS_OPS}!A1`;
-      const rows = operations.map((op) => [
-        generateTransactionId(),
-        op.date,
-        op.type,
-        op.amount,
-        op.actor,
-        op.memo,
-      ]);
-      const url = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ range, majorDimension: "ROWS", values: rows }),
-      });
-      if (!res.ok) {
-        throw new Error(`Sheets append failed: ${res.status} ${await res.text()}`);
-      }
-    } catch (err) {
-      if (err instanceof GoogleSheetsError) throw err;
-      throw new GoogleSheetsError("貯金操作の追記に失敗しました", err);
-    }
-  }
-
-  async getAllPoolOperations(): Promise<PoolOperationWithId[]> {
-    try {
-      const token = await this.getAccessToken();
-      const range = `${SHEET_NAMES.SAVINGS_OPS}!A:F`;
-      const url = `${SHEETS_BASE}/${this.spreadsheetId}/values/${encodeURIComponent(range)}`;
-      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) return [];
-      const data = (await res.json()) as { values?: string[][] };
-      if (!data.values) return [];
-      return data.values
-        .slice(1)
-        .filter((row) => row[0])
-        .map((row) => ({
-          id: row[0],
-          date: row[1],
-          type: row[2] === "積立" ? "積立" : "配分",
-          amount: Number(row[3]) || 0,
-          actor: row[4] ?? "",
-          memo: row[5] ?? "",
-        }));
-    } catch (err) {
-      throw new GoogleSheetsError("貯金操作の取得に失敗しました", err);
     }
   }
 
