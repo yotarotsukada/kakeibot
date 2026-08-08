@@ -27,7 +27,6 @@ export type UserSettlement = {
 
 export type DashboardCoreData = {
   normalWalletName: string;
-  normalWalletExists: boolean;
   totalBudget: number;
   totalUsed: number;
   totalUsagePercentage: number;
@@ -55,6 +54,14 @@ export async function getDashboardData(deps: {
     ]);
 
     const normalWalletExists = wallets.some((w) => w.name === normalWalletName);
+    if (!normalWalletExists) {
+      // その月の通常財布が未作成のときは、アクセスされた時点でスプレッドシートに機械生成する
+      await deps.storage.upsertWallet({
+        name: normalWalletName,
+        type: "月次",
+        settled: false,
+      });
+    }
 
     const categoryUsages: CategoryUsage[] = normalBudgets.map((budget) => {
       const usedAmount = normalEntries
@@ -150,7 +157,6 @@ export async function getDashboardData(deps: {
 
     return ok({
       normalWalletName,
-      normalWalletExists,
       totalBudget,
       totalUsed,
       totalUsagePercentage,

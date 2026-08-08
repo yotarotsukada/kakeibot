@@ -124,15 +124,17 @@ describe("getDashboardData", () => {
     expect(result.value.totalUsed).toBe(10000);
   });
 
-  it("通常財布が存在しない場合 normalWalletExists は false", async () => {
+  it("通常財布が存在しない場合はスプレッドシートに機械生成する", async () => {
     const storage = createTestStorage({ wallets: [], budgets: [], ledger: [] });
 
     const result = await getDashboardData({ storage, selectedMonth: MONTH });
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.normalWalletExists).toBe(false);
     expect(result.value.totalBudget).toBe(0);
+
+    const wallets = await storage.getWallets();
+    expect(wallets).toContainEqual({ name: WALLET, type: "月次", settled: false });
   });
 
   it("未精算の特別財布が 4 件あるとき、最新活動順で上位 3 件に絞られる", async () => {
