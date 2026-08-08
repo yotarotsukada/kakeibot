@@ -41,7 +41,15 @@ const COLOR_SAVINGS_NEG = "oklch(0.66 0.15 25)"; // destructive
 
 // ---- ヒーローカード ----------------------------------------------------------
 
-function HeroCard({ label, amount }: { label: string; amount: number }) {
+function HeroCard({
+  label,
+  amount,
+  secondary,
+}: {
+  label: string;
+  amount: number;
+  secondary?: { label: string; amount: number };
+}) {
   const isNegative = amount < 0;
   return (
     <Card className="rounded-3xl gap-0 py-0 ring-1 ring-foreground/[0.06] shadow-[0_2px_24px_-12px_oklch(0.74_0.13_28_/_0.25)]">
@@ -62,6 +70,17 @@ function HeroCard({ label, amount }: { label: string; amount: number }) {
           {Math.abs(amount).toLocaleString()}
         </p>
       </div>
+      {secondary && (
+        <div className="px-6 py-3.5 border-t border-border/60 flex items-center justify-between">
+          <p className="text-[11px] font-medium text-muted-foreground/70">
+            {secondary.label}
+          </p>
+          <p className="font-numeric tabular-nums text-sm font-semibold text-foreground/80">
+            {secondary.amount < 0 && "−"}¥
+            {Math.abs(secondary.amount).toLocaleString()}
+          </p>
+        </div>
+      )}
     </Card>
   );
 }
@@ -183,15 +202,12 @@ export default function SavingsPage() {
         </p>
       </div>
 
-      {/* ① 累計貯金額（口座残高は参考情報として控えめに添える） */}
-      <div className="space-y-2">
-        <HeroCard label="累計貯金額" amount={totalSavings} />
-        <p className="text-[11px] text-muted-foreground/60 px-2">
-          口座残高の目安 {estimatedBalance < 0 && "−"}¥
-          {Math.abs(estimatedBalance).toLocaleString()}
-          （クレカ引き落とし未反映のため目安）
-        </p>
-      </div>
+      {/* ① 累計貯金額（口座残高はカード内の補足行として添える） */}
+      <HeroCard
+        label="累計貯金額"
+        amount={totalSavings}
+        secondary={{ label: "口座残高", amount: estimatedBalance }}
+      />
 
       {/* ② 月別推移グラフ */}
       <section className="space-y-3">
