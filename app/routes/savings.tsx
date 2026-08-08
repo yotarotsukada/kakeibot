@@ -4,7 +4,6 @@ import {
   Cell,
   ComposedChart,
   LabelList,
-  Line,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -39,8 +38,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
 const COLOR_SAVINGS_POS = "oklch(0.74 0.13 28)"; // coral primary
 const COLOR_SAVINGS_NEG = "oklch(0.66 0.15 25)"; // destructive
-const COLOR_BUDGET = "oklch(0.72 0.10 230)"; // sora blue
-const COLOR_SPENDING = "oklch(0.78 0.11 60)"; // apricot
 
 // ---- ヒーローカード ----------------------------------------------------------
 
@@ -186,10 +183,14 @@ export default function SavingsPage() {
         </p>
       </div>
 
-      {/* ① 累計貯金額 ＋ 口座残高 */}
-      <div className="space-y-3">
+      {/* ① 累計貯金額（口座残高は参考情報として控えめに添える） */}
+      <div className="space-y-2">
         <HeroCard label="累計貯金額" amount={totalSavings} />
-        <HeroCard label="口座残高" amount={estimatedBalance} />
+        <p className="text-[11px] text-muted-foreground/60 px-2">
+          口座残高の目安 {estimatedBalance < 0 && "−"}¥
+          {Math.abs(estimatedBalance).toLocaleString()}
+          （クレカ引き落とし未反映のため目安）
+        </p>
       </div>
 
       {/* ② 月別推移グラフ */}
@@ -228,7 +229,7 @@ export default function SavingsPage() {
                   cursor={{ fill: "oklch(0.96 0.008 60 / 0.5)" }}
                 />
 
-                {/* 貯金額バー（メイン） */}
+                {/* 貯金額バー（予算・支出はTooltipで確認する） */}
                 <Bar dataKey="savedAmount" radius={[4, 4, 0, 0]}>
                   {chartData.map((entry) => (
                     <Cell
@@ -245,64 +246,11 @@ export default function SavingsPage() {
                     content={<SavedAmountLabel />}
                   />
                 </Bar>
-
-                {/* 予算ライン */}
-                <Line
-                  type="monotone"
-                  dataKey="totalBudget"
-                  stroke={COLOR_BUDGET}
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 3, fill: COLOR_BUDGET }}
-                />
-
-                {/* 支出ライン */}
-                <Line
-                  type="monotone"
-                  dataKey="normalSpending"
-                  stroke={COLOR_SPENDING}
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 3, fill: COLOR_SPENDING }}
-                />
               </ComposedChart>
             </ResponsiveContainer>
-
-            {/* 凡例 */}
-            <div className="flex items-center gap-5 mt-2 px-1">
-              <LegendBar color={COLOR_SAVINGS_POS} label="貯金額" />
-              <LegendLine color={COLOR_BUDGET} label="予算" />
-              <LegendLine color={COLOR_SPENDING} label="支出" />
-            </div>
           </div>
         </Card>
       </section>
     </PageLayout>
-  );
-}
-
-function LegendBar({ color, label }: { color: string; label: string }) {
-  return (
-    <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-      <span
-        className="w-3 h-2.5 rounded-sm shrink-0"
-        style={{ backgroundColor: color }}
-        aria-hidden
-      />
-      {label}
-    </span>
-  );
-}
-
-function LegendLine({ color, label }: { color: string; label: string }) {
-  return (
-    <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-      <span
-        className="w-4 shrink-0 rounded-full"
-        style={{ backgroundColor: color, height: "2px" }}
-        aria-hidden
-      />
-      {label}
-    </span>
   );
 }
